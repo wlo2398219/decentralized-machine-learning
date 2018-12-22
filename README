@@ -1,0 +1,33 @@
+-- ENABLE GUI --
+Add -gui in while executing gossiper.go
+
+EXAMPLE:
+go run main.go -name=281544 -gui
+
+-- PRIVATE MESSAGE IN GUI --
+
+- HOW TO SEND
+1. choose  someone from the droplist located in the left of "Send Private Msg" button
+2. type the text in the textarea below "Private Message"
+3. Click "Send Private Msg" button
+
+- HOW TO KNOW IT'S PRIVATE MESSAGE
+In CHAT BOX, if there's "(PRIVATE)", then it's private message. For example: "USER2 (PRIVATE): Hello"
+
+
+-- FILE OPERATIONS -- 
+
+- HOW TO UPLOAD
+1. choose one file by "choose file" button
+2. click "UPLOAD FILE" button
+
+- HOW TO DOWNLOAD
+1. set "FILE NAME" and "META HASH" and where to download the file by the droplist
+2. click "Download" button
+
+
+-- HW3 --
+ADDED go file - file_search.go & blockchain.go
+
+= gui =
+type keywords in the textarea of keywords, send the request and the available two files will be shown below, and double-click to download the file

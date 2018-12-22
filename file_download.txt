@@ -1,0 +1,16 @@
+go run *.go -gossipAddr=127.0.0.1:5000 -UIPort=10000 -name=A -peers=127.0.0.1:5001 -rtimer=5 -gui
+go run *.go -gossipAddr=127.0.0.1:5000 -name=A -peers=127.0.0.1:5001 -rtimer=5 -gui
+go run *.go -gossipAddr=127.0.0.1:5001 -UIPort=10001 -name=B -peers=127.0.0.1:5002 -rtimer=5
+go run *.go -gossipAddr=127.0.0.1:5002 -UIPort=10002 -name=C -rtimer=5
+
+./client -UIPort=10000 -msg=HelloA
+./client -UIPort=10002 -msg=HelloC
+./client -UIPort=10000 -file=A.txt
+./client -UIPort=10000 -file=B.txt
+
+go run main.go -UIPort=10001 -file=A1.txt -request=b04cd0182659133b6f7fbfcba2096b4201f710b2732405f6f5c2ebf82a050dec -dest=A
+go run main.go -UIPort=10002 -file=A2.txt -request=b04cd0182659133b6f7fbfcba2096b4201f710b2732405f6f5c2ebf82a050dec -dest=A
+
+go run main.go -UIPort=10001 -file=B1.txt -request=9f2b92b782af4a8bcf4f73d41bb8962957ea925f36e42945c3c8fbe54e7d27cb -dest=A
+
+go run main.go -UIPort=10002 -file=B2.txt -request=9f2b92b782af4a8bcf4f73d41bb8962957ea925f36e42945c3c8fbe54e7d27cb -dest=A

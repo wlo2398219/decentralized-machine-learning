@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ChatRoom</title>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script> -->
+
+<style type="text/css">
+h3.a {
+  width: 635px;
+  display: inline-block;
+
+}
+
+.box {
+
+}
+.box div.a, select.a {
+    display: inline-block;
+    width: 600px;
+    height: 400px;
+    padding: 5px;
+    border:10px solid #ccc;
+    font:16px/26px Georgia, Garamond, Serif;
+    overflow:auto;
+}
+
+.box select.b {
+    width: 150px;
+    height:50px;
+}
+
+.box div.b {
+  display: inline-block;
+  width: 625px;
+  height: 140px;
+  /*padding: 5px;*/
+  /*border:10px solid #ccc;*/
+  font:16px/26px Georgia, Garamond, Serif;
+  overflow:auto;
+}
+
+/*.box h3 {
+    display: inline-block;
+    padding: 5px;
+}*/
+
+</style>
+
+<!-- <script>
+$(document).ready(function(){
+	$("#sendMsgButton").click(function(){
+    var orgText = $("#chatText").text()
+
+    $.get("/msg/", function(data, status){
+            $("#chatText").append(data + "<br/>");
+            // alert("Data: " + data + "\nStatus: " + status);
+    });
+	})
+})
+</script>
+ -->
+
+
+<!-- send msg button event -->
+<script>
+$(document).ready(function(){
+  $("#sendMsgButton").click(function(){
+    
+    var msgToSend = $("#msgToSend").val()
+
+    $.post("/msg/", 
+           {
+              text: msgToSend
+           }, 
+           function(data, status){
+           	$("#msgToSend").val('')
+            log("Data: " + data + "\nStatus: " + status);
+           }
+    );
+  })
+})
+
+</script>
+
+<script>
+$(document).ready(function(){
+  $("#sendNodeButton").click(function(){
+    
+    var msgToSend = $("#nodeName").val()
+
+    $.post("/node/", 
+           {
+              node: msgToSend
+           }, 
+           function(data, status){
+            $("#nodeName").val('')
+            log("Data: " + data + "\nStatus: " + status);
+           }
+    );
+  })
+})
+</script>
+
+
+
+<script>
+(function periodicMsgGET() {
+  $.ajax({
+    url: '/msg/', 
+    success: function(data) {
+    	// alert("Hello to make sure")
+      if (data != "") {
+        // $("#chatBox").append(data + "<br/>")
+        $("#chatBox").html(data)
+
+      }
+    },
+    complete: function() {
+      // Schedule the next request when the current one's complete
+      setTimeout(periodicMsgGET, 1000);
+    }
+  });
+})();
+</script>
+
+
+<script>
+(function periodicNodeGET() {
+  $.ajax({
+    url: '/node/', 
+    success: function(data) {
+      // alert("hi", data)
+      $("#nodeBox").html(data)
+    },
+    complete: function() {
+      // Schedule the next request when the current one's complete
+      setTimeout(periodicNodeGET, 1000);
+    }
+  });
+})();
+</script>
+
+<script>
+(function periodicIDGET() {
+  $.ajax({
+    url: '/id/', 
+    success: function(data) {
+      $("#idBox").html(data)
+
+      var items = data.split("<br/>")
+      // alert(items)
+      // for (i = 0; i < items.length; i++) {
+
+      // }
+
+      // $('#selectID').empty();
+      $.each(items, function (i, item) {
+        if ($("#selectID option[value='"+item+"']").length == 0) {
+          $("#selectID").append($('<option>', { 
+              value: item,
+              text : item 
+          }));          
+        }
+
+        if ($("#pSelectID option[value='"+item+"']").length == 0) {
+          $("#pSelectID").append($('<option>', { 
+              value: item,
+              text : item 
+          }));          
+        }
+      });
+
+    },
+    complete: function() {
+      // Schedule the next request when the current one's complete
+      setTimeout(periodicIDGET, 1000);
+    }
+  });
+})();
+</script>
+
+<!-- <script>
+$(":file").change(function(){
+    alert($(":file").val());
+});
+</script>
+ -->
+
+<script>
+$(document).ready(function(){
+  $("#sButton").click(function(){
+    $.post("/file/", 
+           {
+              file: $("#sfile").val()
+           }, 
+           function(data, status){
+            $("#sfile").val('')
+           }
+    );
+  })
+})
+
+$(document).ready(function(){
+  $("#btDownload").click(function(){
+    $.post("/file/", 
+           {
+              dest: $("#selectID").val(),
+              filename: $("#filename").val(),
+              metahash: $("#metahash").val()
+           }, 
+           function(data, status){
+            $("#metahash").val('')
+            $("#filename").val('')            
+           }
+    );
+  })
+})
+
+
+$(document).ready(function(){
+  $("#btp2pSendKeywords").click(function(){
+    $.post("/p2pDownload/", 
+           {
+              keywords: $("#p2pKeywords").val()
+           }, 
+           function(data, status){
+              var items = data.split(",")
+              $("#p2pOpt1").html(items[0])
+              // $("#p2pOpt1").text(items[0])
+              $("#p2pOpt2").html(items[1])
+              // $("#p2pOpt2").text(items[1])
+
+           }
+    );
+  })
+})
+
+
+$(document).ready(function(){
+  $("#btp2pClean").click(function(){
+    $("#p2pOpt1").html("")
+    $("#p2pOpt2").html("")    
+  })
+})
+
+$(document).ready(function(){
+  $("#p2pOpt1").dblclick(function() {
+    // if ($("#p2pOpt1").val()) {
+      $.post("/p2pDownload/", 
+             {
+                download: $("#p2pOpt1").html()
+             }, 
+             function(data, status){
+              alert("Download " + $("#p2pOpt1").html())              
+             }
+      );
+    // }
+  });
+})
+
+$(document).ready(function(){
+  $("#p2pOpt2").dblclick(function() {
+
+    // if ($("#p2pOpt2").val()) {
+      $.post("/p2pDownload/", 
+             {
+                download: $("#p2pOpt2").html()
+             }, 
+             function(data, status){
+
+              alert("Download " + $("#p2pOpt2").html())
+             }
+      );
+    // }
+  });
+})
+
+
+$(document).ready(function(){
+  $("#sendPmsgButton").click(function(){
+    
+    var msgToSend = $("#pmsgToSend").val()
+
+    $.post("/msg/", 
+           {
+              text: msgToSend,
+              dest: $("#pSelectID").val()
+           }, 
+           function(data, status){
+            $("#pmsgToSend").val('')
+           }
+    );
+  })
+})
+
+
+</script>
+</head>
+
+<body>
+
+<h3 class="a"> CHAT BOX </h3>
+<h3 class="a"> ID BOX </h3>
+
+<div class="box">
+  <div id="chatBox" class="a" > </div>
+  <div id="idBox" class="a"> 
+  <!-- <select class="a"> -->
+  <!-- </select> -->
+  </div>
+</div>
+
+
+<!-- <div id="chatBox"  style="height:400px;width:802px;border:10px solid #ccc;font:16px/26px Georgia, Garamond, Serif;overflow:auto;">
+</div> -->
+<!-- <div id="chatBox1" style="height:400px;width:802px;border:10px solid #ccc;font:16px/26px Georgia, Garamond, Serif;overflow:auto;"> -->
+</div>
+
+</div>
+<!-- <div> Message </div> -->
+
+<div class="box">
+  <div class="b">
+    <div>Message</div>
+    <textarea rows="3" cols="70" id="msgToSend"></textarea>
+    <button type="button" id="sendMsgButton" style="height:40px;width:150px;">Send Msg</button>
+
+  </div>
+  <div class="b">
+    <div>Private Message</div>
+    <textarea rows="3" cols="70" id="pmsgToSend"></textarea>
+    <select id="pSelectID" style="width: 60px;height:40px;">
+    </select>
+    <button type="button" id="sendPmsgButton" style="height:40px;width:150px;">Send Private Msg</button>
+
+  </div>
+</div>
+
+<!-- <div>
+	<button type="button" id="sendMsgButton" style="height:40px;width:150px;">Send Msg</button>
+</div> -->
+
+<h3 class="a">NODE BOX</h3>
+<h3 class="a">FILE OPERATIONS</h3>
+
+<div class="box">
+  <div id="nodeBox" class="a" ></div>
+  <div class="a">
+    <div>FILE UPLOAD</div>
+    <form>
+      <input id="sfile" type="file">
+    </form>
+    <button id="sButton"> UPLOAD FILE </button>
+    <div>FILE DOWNLOAD</div>
+    <div>FILE NAME</div>
+    <textarea rows="2" cols="70" id="filename"></textarea>    
+    <div>META HASH</div>
+    <textarea rows="3" cols="70" id="metahash"></textarea>
+    <div>DESTINATION</div>
+    <!-- <textarea rows="3" cols="70" id="metahash"></textarea> -->
+    <select id="selectID" class="b">
+    </select>
+    <div></div>
+    <button type="button" id="btDownload" style="height:40px;width:150px;">Download</button>
+
+  </div>
+</div>
+
+<h3 class="a">P2P DOWNLOAD BOX</h3>
+<div class="box">
+  <div class="a">
+    <div>KEYWORDS</div>
+    <textarea rows="3" cols="70" id="p2pKeywords"></textarea>
+    <button type="button" id="btp2pSendKeywords" style="height:40px;width:150px;">Search</button>
+    <button type="button" id="btp2pClean" style="height:40px;width:150px;">Clean Results</button>
+    <div>RESULTS</div>
+    <div id="p2pOpt1" > </div>
+    <div id="p2pOpt2" > 
+
+  </div>
+</div>
+
+<div class="box">
+  <div class="b">
+    <div> New Node Name </div>
+    <textarea rows="3" cols="70" id="msgToSend"></textarea>
+    <button type="button" id="sendNodeButton" style="height:40px;width:150px;">Add New Node</button>
+  </div>
+</div>
+
+<!-- <div>
+  <h3>NODE BOX</h3>
+  <div id="nodeBox" style="height:150px;width:402px;border:10px solid #ccc;font:16px/26px Georgia, Garamond, Serif;overflow:auto;" ></div>
+</div> -->
+<!-- <div> New Node Name </div>
+
+<div>
+  <textarea rows="2" cols="50" id="nodeName"></textarea>
+</div>
+
+<div>
+	<button type="button" id="sendNodeButton" style="height:40px;width:150px;">Add New Node</button>
+</div>
+ -->
+
+<!-- <div>
+  <h3>ID BOX</h3>
+    <div id="idBox" style="height:150px;width:402px;border:10px solid #ccc;font:16px/26px Georgia, Garamond, Serif;overflow:auto;" ></div>
+</div>
+ -->
+
+</body>
+
+</html>
