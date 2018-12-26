@@ -1,33 +1,9 @@
--- ENABLE GUI --
-Add -gui in while executing gossiper.go
+-- CURRENT PROGRESS --
 
-EXAMPLE:
-go run main.go -name=281544 -gui
+- every node shares the same dataset now (load uci_cbm_dataset.txt in 15th line of ml.go) and uses it for training. There're some bugs inside. You can try to run joint_training.sh to see the update of weights in A.out, but the loss isn't converge.
 
--- PRIVATE MESSAGE IN GUI --
+- 
 
-- HOW TO SEND
-1. choose  someone from the droplist located in the left of "Send Private Msg" button
-2. type the text in the textarea below "Private Message"
-3. Click "Send Private Msg" button
+-- NOTE --
+- I found that every beginning letter should be captial case; otherwise it cannot be serialized by protobuf
 
-- HOW TO KNOW IT'S PRIVATE MESSAGE
-In CHAT BOX, if there's "(PRIVATE)", then it's private message. For example: "USER2 (PRIVATE): Hello"
-
-
--- FILE OPERATIONS -- 
-
-- HOW TO UPLOAD
-1. choose one file by "choose file" button
-2. click "UPLOAD FILE" button
-
-- HOW TO DOWNLOAD
-1. set "FILE NAME" and "META HASH" and where to download the file by the droplist
-2. click "Download" button
-
-
--- HW3 --
-ADDED go file - file_search.go & blockchain.go
-
-= gui =
-type keywords in the textarea of keywords, send the request and the available two files will be shown below, and double-click to download the file

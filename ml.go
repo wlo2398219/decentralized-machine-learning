@@ -11,8 +11,8 @@ import (
 
 var (
 	gradCh          chan *GradientPacket
-	nameIDTable     = map[string]bool{}
-	feature, weight = load_data("uci_cbm_dataset.txt")
+	nameIDTable     = map[string]bool{} // used to record if I receive the weight from this peer in the given round
+	feature, weight = load_data("uci_cbm_dataset.txt") // the dataset we use for testing now: feature contains X(Val) and Y(Output), weight is a 0-vector
 )
 
 // Input
@@ -85,24 +85,10 @@ func handleGradient(conn *net.UDPConn, packet *GradientPacket) {
 func broadcastWeight(conn *net.UDPConn, packet *WeightPacket) {
 	// not shared
 
-	// packetBytes := make([]byte, MAX_PACKET_SIZE)
 	packet1 := GossipPacket{WeightPacket: packet}
-	// fmt.Println("=============================")
-	// fmt.Println(packet1)
-	// fmt.Println(packet1.WeightPacket)
-	// fmt.Println("=============================")
-	// tmp_weight := WeightPacket{Org: packet.Org, IterID: packet.IterID, weight: packet.weight}
-	// packet1 := GossipPacket{WeightPacket: &tmp_weight}
 	for peer := range peer_list.Iter() {
 		_ = sendPacketToAddr(conn, packet1, peer)
 	}
-
-	// packetBytes, _ = protobuf.Encode(packet1)
-
-	// fmt.Println("!", packet1)
-	// fmt.Println(packet1.WeightPacket)
-	// fmt.Println(packetBytes)
-	// sendToPeers(conn, "", packetBytes)
 
 }
 
@@ -130,8 +116,8 @@ func newTraining(conn *net.UDPConn) {
 	go func() {
 		// for iteration
 		// for select <- ch
-		k, d := 5, len(weight.Val)
-		gamma := 0.1
+		k, d := 5, len(weight.Val) // k is #weights to be got, d is the dimension of weight
+		gamma := 0.1 // gamma is learning step size
 
 		for round := 0; round < 10; round++ {
 
@@ -179,6 +165,7 @@ func newTraining(conn *net.UDPConn) {
 }
 
 // f: loss function
+// lambda: for regularziation -> lambda * regularization
 func f(x FeatureType, w WeightType, loss_type, regularization string, lambda float64) OutputType {
 
 	// CALCULATE LOSS (DEFAULT IS 2-NORM AND W/O REGULARIZATION)
