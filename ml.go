@@ -16,43 +16,43 @@ var (
 )
 
 // Input
-// func SGD (f func(featureType, weightType) outputType,
-// 		  df func(featureType, weightType) weightType,
-// 		  init_weight weightType) {
+// func SGD (f func(FeatureType, WeightType) OutputType,
+// 		  df func(FeatureType, WeightType) WeightType,
+// 		  init_weight WeightType) {
 
 // }
 
-type weightType struct {
-	val []float64
+type WeightType struct {
+	Val []float64
 }
 
-type featureType struct {
-	val    [][]float64
-	output []float64
+type FeatureType struct {
+	Val    [][]float64
+	Output []float64
 }
 
-type outputType struct {
-	val float64
+type OutputType struct {
+	Val float64
 }
 
 type WeightPacket struct {
-	org    string
-	iterID int
-	weight weightType
+	Org    string
+	IterID int
+	Weight *WeightType
 }
 
 type GradientPacket struct {
-	org      string
-	dst      string
-	iterID   int
-	gradient weightType
+	Org      string
+	Dst      string
+	IterID   int
+	Gradient WeightType
 }
 
 // handle the weight packet received from gossip port
 func handleWeight(conn *net.UDPConn, packet *WeightPacket) {
 	// sendWeight
-	// sendgradient
-	key := packet.org + strconv.Itoa(packet.iterID)
+	// sendGradient
+	key := packet.Org + strconv.Itoa(packet.IterID)
 
 	if _, exist := nameIDTable[key]; exist {
 		return
@@ -60,22 +60,23 @@ func handleWeight(conn *net.UDPConn, packet *WeightPacket) {
 		nameIDTable[key] = true
 		// broadcast
 		broadcastWeight(conn, packet)
-		grad := grad_f(feature, weight, "mse", "", 1.5)
-		sendGradient(conn, &GradientPacket{org: *name, dst: packet.org, iterID: packet.iterID, gradient: grad}, packet.org)
+		// fmt.Println("=== MY WEIGHT ===")
+		grad := grad_f(feature, weight, "mse", "", 0)
+		sendGradient(conn, &GradientPacket{Org: *name, Dst: packet.Org, IterID: packet.IterID, Gradient: grad}, packet.Org)
 	}
 
 }
 
-// handle the gradient packet received from gossip port
+// handle the Gradient packet received from gossip port
 func handleGradient(conn *net.UDPConn, packet *GradientPacket) {
 	// if myself -> update
 	// esle -> sendGradient
 
-	if packet.dst == *name {
+	if packet.Dst == *name {
 		// receive the packet
 		gradCh <- packet
 	} else {
-		sendGradient(conn, packet, packet.dst)
+		sendGradient(conn, packet, packet.Dst)
 	}
 
 }
@@ -86,7 +87,12 @@ func broadcastWeight(conn *net.UDPConn, packet *WeightPacket) {
 
 	// packetBytes := make([]byte, MAX_PACKET_SIZE)
 	packet1 := GossipPacket{WeightPacket: packet}
-
+	// fmt.Println("=============================")
+	// fmt.Println(packet1)
+	// fmt.Println(packet1.WeightPacket)
+	// fmt.Println("=============================")
+	// tmp_weight := WeightPacket{Org: packet.Org, IterID: packet.IterID, weight: packet.weight}
+	// packet1 := GossipPacket{WeightPacket: &tmp_weight}
 	for peer := range peer_list.Iter() {
 		_ = sendPacketToAddr(conn, packet1, peer)
 	}
@@ -100,14 +106,14 @@ func broadcastWeight(conn *net.UDPConn, packet *WeightPacket) {
 
 }
 
-// send the gradient to the host, used by the peer receiving the weight
-func sendGradient(conn *net.UDPConn, packet *GradientPacket, dst string) {
+// send the Gradient to the host, used by the peer receiving the weight
+func sendGradient(conn *net.UDPConn, packet *GradientPacket, Dst string) {
 	// not shared
 	// private message
 	gossipPacket := GossipPacket{GradientPacket: packet}
 
-	if _, exist := nextHopTable[dst]; exist {
-		_ = sendPacketToAddr(conn, gossipPacket, nextHopTable[dst].NextHop)
+	if _, exist := nextHopTable[Dst]; exist {
+		_ = sendPacketToAddr(conn, gossipPacket, nextHopTable[Dst].NextHop)
 	} else {
 		fmt.Println("==== DON'T KNOW THE DESTINATION OF THE GRADIENT ====")
 	}
@@ -119,15 +125,17 @@ func newTraining(conn *net.UDPConn) {
 	// load dataset
 	gradCh = make(chan *GradientPacket)
 
+	fmt.Println("MY INIT WEIGHTS")
+	fmt.Println(weight.Val)
 	go func() {
 		// for iteration
 		// for select <- ch
-		k, d := 5, len(weight.val)
+		k, d := 5, len(weight.Val)
 		gamma := 0.1
 
 		for round := 0; round < 10; round++ {
 
-			broadcastWeight(conn, &WeightPacket{org: *name, iterID: round, weight: weight})
+			broadcastWeight(conn, &WeightPacket{Org: *name, IterID: round, Weight: &weight})
 			fmt.Println("====== TRAINING EPOCH", round, "======")
 
 			// used to save sum(grad)
@@ -139,14 +147,14 @@ func newTraining(conn *net.UDPConn) {
 
 				case ch := <-gradCh:
 
-					if ch.iterID == round { // same round
+					if ch.IterID == round { // same round
 
 						i++
 
-						fmt.Println("===== GET GRADIENT FROM", ch.org, "=====")
-
+						fmt.Println("===== GET GRADIENT FROM", ch.Org, "=====")
+						fmt.Println(ch.Gradient.Val)
 						for i := range updates {
-							updates[i] += ch.gradient.val[i]
+							updates[i] += ch.Gradient.Val[i]
 						}
 
 					}
@@ -155,13 +163,15 @@ func newTraining(conn *net.UDPConn) {
 
 			// update the weight
 			for i := range updates {
-				weight.val[i] = weight.val[i] - gamma*updates[i]/float64(k)
+				weight.Val[i] = weight.Val[i] - gamma*updates[i]/float64(k)
 			}
 
-			loss := f(feature, weight, "mse", "", 1.5)
+			fmt.Println("CURRENT WEIGHTS:", weight.Val)
+
+			loss := f(feature, weight, "mse", "", 0)
 			fmt.Println("LOSS:", loss)
 
-		}
+		}	
 
 	}()
 
@@ -169,31 +179,31 @@ func newTraining(conn *net.UDPConn) {
 }
 
 // f: loss function
-func f(x featureType, w weightType, loss_type, regularization string, lambda float64) outputType {
+func f(x FeatureType, w WeightType, loss_type, regularization string, lambda float64) OutputType {
 
 	// CALCULATE LOSS (DEFAULT IS 2-NORM AND W/O REGULARIZATION)
 
-	if len(x.val[0]) != len(w.val) {
+	if len(x.Val[0]) != len(w.Val) {
 		log.Fatal("INCONSISTENCY OF DIMENSION IN f")
 	}
 
 	// transform x, w, y to matrices
 	var (
-		row, col = len(x.val), len(x.val[0])
-		mat_x    = &Matrix{row: row, col: col, mat: x.val}
+		row, col = len(x.Val), len(x.Val[0])
+		mat_x    = &Matrix{row: row, col: col, mat: x.Val}
 		mat_w    = &Matrix{row: col, col: 1, mat: make([][]float64, col)}
 		mat_y    = &Matrix{row: row, col: 1, mat: make([][]float64, row)}
-		loss     outputType
+		loss     OutputType
 	)
 
 	for i := 0; i < col; i++ {
 		mat_w.mat[i] = make([]float64, 1)
-		mat_w.mat[i][0] = w.val[i]
+		mat_w.mat[i][0] = w.Val[i]
 	}
 
 	for i := 0; i < row; i++ {
 		mat_y.mat[i] = make([]float64, 1)
-		mat_y.mat[i][0] = x.output[i]
+		mat_y.mat[i][0] = x.Output[i]
 	}
 
 	// compute loss
@@ -209,10 +219,10 @@ func f(x featureType, w weightType, loss_type, regularization string, lambda flo
 
 	switch regularization {
 	case "ridge":
-		loss.val += innerProduct(w.val, w.val)
+		loss.Val += innerProduct(w.Val, w.Val)
 	case "lasso":
-		for i := 0; i < len(w.val); i++ {
-			loss.val += math.Abs(w.val[i])
+		for i := 0; i < len(w.Val); i++ {
+			loss.Val += math.Abs(w.Val[i])
 		}
 	default:
 
@@ -220,29 +230,29 @@ func f(x featureType, w weightType, loss_type, regularization string, lambda flo
 
 	return loss
 }
-func grad_f(x featureType, w weightType, loss_type, regularization string, lambda float64) weightType {
+func grad_f(x FeatureType, w WeightType, loss_type, regularization string, lambda float64) WeightType {
 
-	if len(x.val[0]) != len(w.val) {
+	if len(x.Val[0]) != len(w.Val) {
 		log.Fatal("INCONSISTENCY OF DIMENSION IN f")
 	}
 
 	// transform x, w, y to matrices
 	var (
-		row, col = len(x.val), len(x.val[0])
-		mat_x    = &Matrix{row: row, col: col, mat: x.val}
+		row, col = len(x.Val), len(x.Val[0])
+		mat_x    = &Matrix{row: row, col: col, mat: x.Val}
 		mat_w    = &Matrix{row: col, col: 1, mat: make([][]float64, col)}
 		mat_y    = &Matrix{row: row, col: 1, mat: make([][]float64, row)}
-		grad     weightType
+		grad     WeightType
 	)
 
 	for i := 0; i < col; i++ {
 		mat_w.mat[i] = make([]float64, 1)
-		mat_w.mat[i][0] = w.val[i]
+		mat_w.mat[i][0] = w.Val[i]
 	}
 
 	for i := 0; i < row; i++ {
 		mat_y.mat[i] = make([]float64, 1)
-		mat_y.mat[i][0] = x.output[i]
+		mat_y.mat[i][0] = x.Output[i]
 	}
 
 	switch loss_type {
@@ -257,7 +267,7 @@ func grad_f(x featureType, w weightType, loss_type, regularization string, lambd
 }
 
 // df = x^T(xw-y) + lambda * d(regularization)
-func grad_mse(x *Matrix, w *Matrix, y *Matrix, regularization string, lambda float64) weightType {
+func grad_mse(x *Matrix, w *Matrix, y *Matrix, regularization string, lambda float64) WeightType {
 	N := float64(x.row)
 	grad := x.T().mul(x.mul(w).sub(y)).mulConstant(1.0 / N)
 	result := make([]float64, w.row)
@@ -283,11 +293,11 @@ func grad_mse(x *Matrix, w *Matrix, y *Matrix, regularization string, lambda flo
 		result[i] = grad.mat[i][0]
 	}
 
-	return weightType{val: result}
+	return WeightType{Val: result}
 }
 
 // f(x,w,y) = (xw-y)^T(xw-y), x:nxd, w:dx1
-func mse_loss(x *Matrix, w *Matrix, y *Matrix, regularization string, lambda float64) outputType {
+func mse_loss(x *Matrix, w *Matrix, y *Matrix, regularization string, lambda float64) OutputType {
 	N := float64(x.row)
 	tmp := x.mul(w).sub(y)
 	norm := float64(0)
@@ -296,15 +306,15 @@ func mse_loss(x *Matrix, w *Matrix, y *Matrix, regularization string, lambda flo
 	case "ridge":
 		norm = (w.T().mul(w)).mat[0][0]
 	case "lasso":
-		for _, val := range w.mat {
-			norm += math.Abs(val[0])
+		for _, Val := range w.mat {
+			norm += math.Abs(Val[0])
 		}
 	}
 
-	return outputType{val: tmp.T().mul(tmp).mat[0][0]/(2*N) + lambda*norm}
+	return OutputType{Val: tmp.T().mul(tmp).mat[0][0]/(2*N) + lambda*norm}
 }
 
-func logistic_loss(x *Matrix, w *Matrix, y *Matrix) outputType {
+func logistic_loss(x *Matrix, w *Matrix, y *Matrix) OutputType {
 	N := float64(x.row)
 	y_hat := x.mul(w).sigmoid()
 	one_minus_y := &Matrix{row: y.row, col: 1, mat: make([][]float64, y.row)}
@@ -327,5 +337,5 @@ func logistic_loss(x *Matrix, w *Matrix, y *Matrix) outputType {
 
 	fmt.Println("LOSS DIMENSION:", loss.row, loss.col)
 
-	return outputType{val: -loss.mat[0][0] / N}
+	return OutputType{Val: -loss.mat[0][0] / N}
 }

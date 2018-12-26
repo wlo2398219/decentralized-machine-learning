@@ -10,7 +10,7 @@ import (
 // func rumorMongering(conn *net.UDPConn, sender, mongerIP string, ch chan bool, msgBytes []byte) {
 func rumorMongering(conn *net.UDPConn, sender, mongerIP string, ch chan *StatusPacket, msgBytes []byte) {
 
-	// fmt.Println("MONGERING with", mongerIP)
+	fmt.Println("MONGERING with", mongerIP)
 	dst, _ := net.ResolveUDPAddr("udp4", mongerIP)
 
 	_, err := conn.WriteToUDP(msgBytes, dst)
@@ -33,7 +33,7 @@ func rumorMongering(conn *net.UDPConn, sender, mongerIP string, ch chan *StatusP
 	case <-timer.C:
 		if continueSending() && peer_list.Len() != 1 {
 			nextOne := randomPeer(mongerIP)
-			// fmt.Println("FLIPPED COIN sending rumor to", nextOne)
+			fmt.Println("FLIPPED COIN sending rumor to", nextOne)
 			go rumorMongering(conn, mongerIP, nextOne, recv_channels[nextOne], msgBytes)
 		} else {
 		}
@@ -101,10 +101,10 @@ func compareStatusAndSend(conn *net.UDPConn, recv_status *StatusPacket, dst_addr
 		}
 	}
 
-	// fmt.Println("IN SYNC WITH " + dst_addr)
+	fmt.Println("IN SYNC WITH " + dst_addr)
 	if msgBytes != nil && continueSending() && peer_list.Len() != 1 {
 		nextOne := randomPeer(dst_addr)
-		// fmt.Println("FLIPPED COIN sending rumor to", nextOne)
+		fmt.Println("FLIPPED COIN sending rumor to", nextOne)
 		go rumorMongering(conn, dst_addr, nextOne, recv_channels[nextOne], msgBytes)
 	}
 

@@ -278,8 +278,9 @@ func handleGossiper(gossiper *Gossiper, fileData map[string]*mFile) {
 			// fmt.Println(msg.BlockPublish.HopLimit)
 			handleBlock(gossiper.conn, msg.BlockPublish, peer_list, relaySender)
 		} else if msg.WeightPacket != nil {
-
+			// fmt.Println("GET THE WEIGHT PACKET!")
 			handleWeight(gossiper.conn, msg.WeightPacket)
+			// sendToPeers(gossiper.conn, "", packetBytes)
 		} else if msg.GradientPacket != nil {
 
 			handleGradient(gossiper.conn, msg.GradientPacket)
@@ -415,9 +416,19 @@ func handleClient(ch chan *GossipPacket, gossiper *Gossiper, fileData map[string
 func sendPacketToAddr(conn *net.UDPConn, gossipPacket GossipPacket, dst_addr string) error {
 	packetBytes := make([]byte, MAX_PACKET_SIZE)
 	msg := &gossipPacket
-	packetBytes, _ = protobuf.Encode(msg)
+	packetBytes, err1 := protobuf.Encode(msg)
 	dst, _ := net.ResolveUDPAddr("udp4", dst_addr)
 	_, err := conn.WriteToUDP(packetBytes, dst)
+
+	if err1 != nil {
+		fmt.Println("ERROR!!!!!!! ")
+		fmt.Println(err1)
+	}
+	if gossipPacket.WeightPacket != nil {
+		fmt.Println("==== SEND WEIGHTPACKET ====")
+		fmt.Println(gossipPacket.WeightPacket.Weight)
+		// fmt.Println(packetBytes)
+	}
 
 	if err != nil {
 		log.Fatal(err)

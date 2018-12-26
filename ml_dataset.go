@@ -8,7 +8,7 @@ import (
 	"io/ioutil"
 )
 
-func load_data(filename string) (featureType, weightType) {
+func load_data(filename string) (FeatureType, WeightType) {
 	var (
 		x [][]float64
 		y []float64
@@ -20,7 +20,7 @@ func load_data(filename string) (featureType, weightType) {
 		x, y, w = uci_cbm()
 	}
 
-	return featureType{val: x, output: y}, weightType{val: w}
+	return FeatureType{Val: x, Output: y}, WeightType{Val: w}
 }
 
 func uci_cbm() ([][]float64, []float64, []float64) {
