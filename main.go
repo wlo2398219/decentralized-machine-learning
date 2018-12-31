@@ -425,7 +425,7 @@ func sendPacketToAddr(conn *net.UDPConn, gossipPacket GossipPacket, dst_addr str
 		fmt.Println(err1)
 	}
 	if gossipPacket.WeightPacket != nil {
-		fmt.Println("==== SEND WEIGHTPACKET ====")
+		fmt.Println("==== SEND WEIGHTPACKET TO", dst_addr, "====")
 		fmt.Println(gossipPacket.WeightPacket.Weight)
 		// fmt.Println(packetBytes)
 	}

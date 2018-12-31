@@ -34,7 +34,7 @@ func (m1 *Matrix) mul(m2 *Matrix) *Matrix {
 
 func (m1 *Matrix) sub(m2 *Matrix) *Matrix {
 	if m1.row != m2.row || m1.col != m2.col {
-		log.Fatal("INCONSISTENCY OF DIMENSION in substraction")
+		log.Fatal("INCONSISTENCY OF DIMENSION in substraction, m1 = ", m1.row, "*", m1.col, ", m2 = ", m2.row, "*", m2.col)
 	}
 
 	var result = m1.getCopy()
@@ -79,6 +79,16 @@ func (m *Matrix) T() *Matrix {
 	}
 
 	return &result
+}
+
+func (m *Matrix) norm(p float64) float64 {
+	ans := 0.0
+	for i := 0; i < m.row; i++ {
+		for j := 0; j < m.col; j++ {
+			ans += math.Pow(m.mat[i][j], p)
+		}
+	}
+	return math.Pow(ans, 1 / p)
 }
 
 func (m *Matrix) getCopy() *Matrix {

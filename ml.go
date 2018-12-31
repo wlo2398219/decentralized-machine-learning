@@ -13,6 +13,7 @@ var (
 	gradCh          chan *GradientPacket
 	nameIDTable     = map[string]bool{} // used to record if I receive the weight from this peer in the given round
 	feature, weight = load_data("uci_cbm_dataset.txt") // the dataset we use for testing now: feature contains X(Val) and Y(Output), weight is a 0-vector
+	// feature_test, _ = load_data("uci_cbm_dataset_test.txt")
 )
 
 // Input
@@ -52,6 +53,7 @@ type GradientPacket struct {
 func handleWeight(conn *net.UDPConn, packet *WeightPacket) {
 	// sendWeight
 	// sendGradient
+	fmt.Println("==== HANDLE WEIGHT PACKET", packet, " ====")
 	key := packet.Org + strconv.Itoa(packet.IterID)
 
 	if _, exist := nameIDTable[key]; exist {
@@ -84,9 +86,9 @@ func handleGradient(conn *net.UDPConn, packet *GradientPacket) {
 // broadcast the weight to other peers, used by the one announcing the training
 func broadcastWeight(conn *net.UDPConn, packet *WeightPacket) {
 	// not shared
-
 	packet1 := GossipPacket{WeightPacket: packet}
 	for peer := range peer_list.Iter() {
+		fmt.Println("==== BROADCAST WEIGHT TO", peer, " ====")
 		_ = sendPacketToAddr(conn, packet1, peer)
 	}
 
@@ -113,56 +115,174 @@ func newTraining(conn *net.UDPConn) {
 
 	fmt.Println("MY INIT WEIGHTS")
 	fmt.Println(weight.Val)
-	go func() {
-		// for iteration
-		// for select <- ch
-		k, d := 5, len(weight.Val) // k is #weights to be got, d is the dimension of weight
-		gamma := 0.1 // gamma is learning step size
+	go byzantineSGD(conn)
+	//go distributedSGD(conn)
+}
 
-		for round := 0; round < 10; round++ {
+func distributedSGD(conn *net.UDPConn) {
+	// for iteration
+	// for select <- ch
+	k, d := 5, len(weight.Val) // k is #weights to be got, d is the dimension of weight
+	gamma := 0.0000000001 // gamma is learning step size
 
-			broadcastWeight(conn, &WeightPacket{Org: *name, IterID: round, Weight: &weight})
-			fmt.Println("====== TRAINING EPOCH", round, "======")
+	for round := 0; round < 10; round++ {
 
-			// used to save sum(grad)
-			updates := make([]float64, d)
+		broadcastWeight(conn, &WeightPacket{Org: *name, IterID: round, Weight: &weight})
+		fmt.Println("====== TRAINING EPOCH", round, "======")
 
-			for i := 0; i < k; {
+		// used to save sum(grad)
+		updates := make([]float64, d)
 
-				select {
+		for i := 0; i < k; {
 
-				case ch := <-gradCh:
+			select {
 
-					if ch.IterID == round { // same round
+			case ch := <-gradCh:
 
-						i++
+				if ch.IterID == round { // same round
 
-						fmt.Println("===== GET GRADIENT FROM", ch.Org, "=====")
-						fmt.Println(ch.Gradient.Val)
-						for i := range updates {
-							updates[i] += ch.Gradient.Val[i]
-						}
+					i++
 
+					fmt.Println("===== GET GRADIENT FROM", ch.Org, "=====")
+					fmt.Println(ch.Gradient.Val)
+					for j := range updates {
+						updates[j] += ch.Gradient.Val[j]
 					}
+
 				}
 			}
+		}
 
-			// update the weight
-			for i := range updates {
-				weight.Val[i] = weight.Val[i] - gamma*updates[i]/float64(k)
-			}
+		// update the weight
+		for i := range updates {
+			weight.Val[i] = weight.Val[i] - gamma*updates[i]/float64(k)
+		}
 
-			fmt.Println("CURRENT WEIGHTS:", weight.Val)
+		fmt.Println("CURRENT WEIGHTS:", weight.Val)
 
-			loss := f(feature, weight, "mse", "", 0)
-			fmt.Println("LOSS:", loss)
-
-		}	
-
-	}()
-
-	// return gradCh
+		loss_train := f(feature, weight, "mse", "", 0)
+		// loss_test  := f(feature_test,  weight, "mse", "", 0)
+		fmt.Println("LOSS:", loss_train)//, ", TEST LOSS:", loss_test)
+	}
 }
+
+func byzantineSGD(conn *net.UDPConn) {
+	// Parameter.
+	byzF := 1
+
+	// Internal states for filters.
+	lastPeerWeights := make(map[string]WeightType)
+	lastPeerGradients := make(map[string]WeightType)
+	lastWeight := weight
+	lastGradient := weight
+	weightHistory := make([]WeightType, 0)
+	recentPeers := make([]string, 0)
+
+	// Dampening component as described in the paper sec 3.2.
+	dampening := func (delay float64) float64 { return math.Exp(-0.2 * delay) }
+
+	// Lipschitz filter as described in the paper sec 3.1.
+	lipschitzFilter := func (grad *GradientPacket) bool {
+		ok := false
+		cnt := 0
+		gradientEvo := sliceToMat(grad.Gradient.Val).
+			sub(sliceToMat(lastGradient.Val)).norm(2)
+		modelEvo := sliceToMat(weight.Val).
+			sub(sliceToMat(lastWeight.Val)).norm(2)
+		if modelEvo < 1e-9 {
+			ok = true
+		}
+		newLC := gradientEvo / (modelEvo + 1e-9)
+
+		for peer, _ := range nextHopTable {
+			lastPeerGradient, exist := lastPeerGradients[peer]
+			if !exist { ok = true; break }
+			lastPeerWeight, exist := lastPeerWeights[peer]
+			if !exist { ok = true; break }
+
+			peerGradientEvo := sliceToMat(grad.Gradient.Val).
+				sub(sliceToMat(lastPeerGradient.Val)).norm(2)
+			peerModelEvo := sliceToMat(weightHistory[grad.IterID].Val).
+				sub(sliceToMat(lastPeerWeight.Val)).norm(2)
+
+			if peerModelEvo < 1e-9 { ok = true; break }
+			peerLC := peerGradientEvo / (peerModelEvo + 1e-9)
+
+			if peerLC < newLC {
+				cnt++
+			}
+		}
+
+		if cnt <= len(nextHopTable) - byzF {
+			ok = true
+		}
+
+		return ok
+	}
+
+	// Frequency filter as described in the paper sec 3.1.
+	frequencyFilter := func (grad *GradientPacket) bool {
+		ok := true
+		for _, peer := range recentPeers {
+			if peer == grad.Org {
+				ok = false
+			}
+		}
+		return ok
+	}
+
+
+	m := 1
+	d := len(weight.Val) // k is #weights to be got, d is the dimension of weight
+	gamma := 0.0000000001 // gamma is learning step size
+
+	weightHistory = append(weightHistory, weight)
+	for round := 0; round < 100; round++ {
+		fmt.Println("====== TRAINING ITERATION", round, "======")
+		broadcastWeight(conn, &WeightPacket{Org: *name, IterID: round, Weight: &weight})
+
+		// used to save sum(grad)
+		updates := make([]float64, d)
+		count := 0
+
+		for ; count < m; {
+			grad := <-gradCh
+			fmt.Println("===== GET GRADIENT FROM", grad.Org, "=====")
+			fmt.Println(grad.Gradient.Val, lipschitzFilter(grad), frequencyFilter(grad))
+			if lipschitzFilter(grad) && frequencyFilter(grad) {
+				delay := float64(round - grad.IterID)
+				for j := range updates {
+					updates[j] += dampening(delay) * grad.Gradient.Val[j]
+				}
+
+				count++
+
+				// Update history list for the filters.
+				lastPeerWeights[grad.Org] = weight
+				lastPeerGradients[grad.Org] = grad.Gradient
+				if len(recentPeers) == 2 * byzF {
+					recentPeers = recentPeers[1:]
+				}
+				recentPeers = append(recentPeers, grad.Org)
+			}
+		}
+
+		// update the weight
+		lastWeight = weight
+		lastGradient.Val = updates
+		for i := range updates {
+			weight.Val[i] = weight.Val[i] - gamma*updates[i]
+		}
+		weightHistory = append(weightHistory, weight)
+
+		fmt.Println("CURRENT WEIGHTS:", weight.Val)
+
+		loss_train := f(feature, weight, "mse", "", 0)
+		// loss_test  := f(feature_test,  weight, "mse", "", 0)
+		fmt.Println("LOSS:", loss_train)//, ", TEST LOSS:", loss_test)
+	}
+}
+
 
 // f: loss function
 // lambda: for regularziation -> lambda * regularization

@@ -18,6 +18,8 @@ func load_data(filename string) (FeatureType, WeightType) {
 	switch filename {
 	case "uci_cbm_dataset.txt":
 		x, y, w = uci_cbm()
+	case "test":
+		x, y, w = test_dataset()
 	}
 
 	return FeatureType{Val: x, Output: y}, WeightType{Val: w}
@@ -28,7 +30,7 @@ func uci_cbm() ([][]float64, []float64, []float64) {
 		N, nf    = 11934, 15
 		x        = make([][]float64, N)
 		y        = make([]float64, N)
-		w        = make([]float64, 15)
+		w        = make([]float64, nf)
 		data     = make([]float64, nf)
 		filename = "./_Datasets/uci_cbm_dataset.txt"
 	)
@@ -41,7 +43,7 @@ func uci_cbm() ([][]float64, []float64, []float64) {
 
 	lines := strings.Split(string(b), "\n")
 
-	for ind, line := range lines[:11934] {
+	for ind, line := range lines[:N] {
 
 		tmp := strings.Split(line[3:], "   ")
 
@@ -56,6 +58,45 @@ func uci_cbm() ([][]float64, []float64, []float64) {
 		x[ind] = make([]float64, nf)
 		copy(x[ind], data)
 		y[ind], _ = strconv.ParseFloat(tmp[16], 64)
+
+	}
+
+	// fmt.Println(x[0], y[0])
+	// fmt.Println(x[10], y[10])
+
+	return x, y, w
+
+}
+
+func test_dataset() ([][]float64, []float64, []float64) {
+	var (
+		N, nf    = 1000, 16
+		x        = make([][]float64, N)
+		y        = make([]float64, N)
+		w        = make([]float64, nf)
+		data     = make([]float64, nf + 1)
+		filename = "./_Datasets/fake.txt"
+	)
+
+	b, err := ioutil.ReadFile(filename)
+
+	if err != nil {
+		log.Fatal("Failed to open " + filename)
+	}
+
+	lines := strings.Split(string(b), "\n")
+
+	for ind, line := range lines[:N] {
+
+		tmp := strings.Split(line, ",")
+
+		for i := 0; i < nf; i++ {
+			data[i], _ = strconv.ParseFloat(tmp[i], 64)
+		}
+
+		x[ind] = make([]float64, nf)
+		copy(x[ind], data)
+		y[ind], _ = strconv.ParseFloat(tmp[nf], 64)
 
 	}
 
