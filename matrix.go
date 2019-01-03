@@ -264,3 +264,21 @@ func sliceToMat(v []float64) *Matrix {
 
 	return result
 }
+
+
+func getZeroMat(r, c int) *Matrix {
+	result := &Matrix{row: r, col: c, mat: make([][]float64, r)}
+
+	for i := 0 ; i < r ; i++ {
+		result.mat[i] = make([]float64, c)
+	}
+
+	return result
+}
+
+func initMatrix(data [][]float64) *Matrix {
+	r, c := len(data), len(data[0])
+	result := &Matrix{row: r, col: c, mat: data}
+
+	return result
+}
