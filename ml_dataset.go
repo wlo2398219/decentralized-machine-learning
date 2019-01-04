@@ -106,3 +106,40 @@ func test_dataset() ([][]float64, []float64, []float64) {
 	return x, y, w
 
 }
+
+func mnist_dataset() ([][]float64, []int) {
+	var (
+		N, nf    = 60000, 500
+		x        = make([][]float64, N)
+		y        = make([]int, N)
+		data     = make([]float64, nf)
+		filename = "./_Datasets/hidden_layer_train.csv"
+	)
+
+	b, err := ioutil.ReadFile(filename)
+
+	if err != nil {
+		log.Fatal("Failed to open " + filename)
+	}
+
+	lines := strings.Split(string(b), "\n")
+
+	for ind, line := range lines[:N] {
+
+		tmp := strings.Split(line, ",")
+		tmp1, _ := strconv.ParseFloat(tmp[0], 64)
+		y[ind] = int(tmp1)
+		
+		for i := 1; i < nf + 1; i++ {
+			data[i - 1], _ = strconv.ParseFloat(tmp[i], 64)
+		}
+
+		x[ind] = make([]float64, nf)
+		copy(x[ind], data)
+
+	}
+
+	return x, y
+
+}
+

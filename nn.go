@@ -85,9 +85,7 @@ func (l *FCLayer) forward(x *Matrix) *Matrix {
 
 	for i := 0 ; i < result.row ; i ++ {
 		for j := 0 ; j < result.col ; j++ {
-
 			result.mat[i][j] += l.B.mat[j][0]
-
 		}
 	}
 
@@ -139,10 +137,13 @@ func (l *SoftmaxLayer) forward(x *Matrix) *Matrix {
 			result.mat[i][j] = tmp
 		}
 
+		// test := float64(0)
 		for j := 0 ; j < x.col ; j++ {
 			result.mat[i][j] /= sum
+			// test += result.mat[i][j]
 		}
 
+		// fmt.Println()
 	}
 
 	l.X = x
@@ -174,13 +175,16 @@ func (l *SoftmaxLayer) backward(dz *Matrix) *Matrix {
 		// fmt.Println(vecZ.row, vecZ.col)
 		// fmt.Println(diag.row, diag.col)
 
-		tmp := vecY.mul(vecY.T()).add(diag).mul(vecZ)
+		tmp := vecY.mul(vecY.T().mulConstant(-1.0)).add(diag).mul(vecZ)
+		// tmp.print()
 
 		for j := 0 ; j < dz.col ; j++ {
 			result.mat[i][j] = tmp.mat[j][0]
 		}
 
 	}	
+
+	// fmt.Println(result.row, result.col)
 
 	return result
 
@@ -207,11 +211,11 @@ func (l *CrossEntropyLayer) forward(x *Matrix, y []int) float64 {
 
 // output: N x c
 func (l *CrossEntropyLayer) backward() *Matrix {
-
+	N := float64(l.X.row)
 	result := getZeroMat(l.X.row, l.X.col)
 
 	for i := 0 ; i < result.row ; i++ {
-		result.mat[i][l.Y[i]] -= 1/l.X.mat[i][l.Y[i]]/float64(l.X.row) // -yi/pi
+		result.mat[i][l.Y[i]] = -1.0/(l.X.mat[i][l.Y[i]] * N) // -yi/pi
 	}
 
 	return result
