@@ -4,6 +4,7 @@ import (
 	// "log"
 	"math"
 	"math/rand"
+	// "fmt"
 )
 
 type NNLayer interface {
@@ -19,7 +20,7 @@ type SoftmaxLayer struct {
 
 type CrossEntropyLayer struct {
 	X *Matrix
-	Y *Matrix
+	Y []int
 }
 
 type FCLayer struct {
@@ -34,6 +35,7 @@ type FCLayer struct {
 type MSELoss struct {
 	X *Matrix
 	Y *Matrix
+	// Y []float64
 }
 
 
@@ -123,6 +125,7 @@ func (l *FCLayer) updatePara(gamma float64) {
 }
 
 // x: N x d
+// output: N x d
 func (l *SoftmaxLayer) forward(x *Matrix) *Matrix {
 
 	result := x.getCopy()
@@ -149,51 +152,67 @@ func (l *SoftmaxLayer) forward(x *Matrix) *Matrix {
 
 }
 
-func (l *SoftmaxLayer) backward(z *Matrix) *Matrix {
+// dz : N x c
+// x: N x c 
+func (l *SoftmaxLayer) backward(dz *Matrix) *Matrix {
+	
+	result := getZeroMat(dz.row, dz.col)
+	
+	for i := 0 ; i < dz.row ; i++ {
 
-	dim := l.X.row // #categories
-	diag := &Matrix{row: dim, col: dim, mat: make([][]float64, dim)}
-	result := l.Y.mul(l.Y.T())
+		vecZ := getZeroMat(dz.col, 1)
+		vecY := getZeroMat(dz.col, 1)
 
+		diag := diagMatrix(l.Y.mat[i])
 
-	for i := 0 ; i < dim ; i++ {
-		diag.mat[i] = make([]float64, dim)
-		diag.mat[i][i] = l.Y.mat[i][0]
-	}
+		for j := 0 ; j < dz.col ; j++ {
+			vecZ.mat[j][0] = dz.mat[i][j]
+			vecY.mat[j][0] = l.Y.mat[i][j]
+		}
 
-	result = result.add(diag)
+		// fmt.Println(vecY.row, vecY.col)
+		// fmt.Println(vecZ.row, vecZ.col)
+		// fmt.Println(diag.row, diag.col)
 
-	return result.mul(z)
-}
+		tmp := vecY.mul(vecY.T()).add(diag).mul(vecZ)
 
+		for j := 0 ; j < dz.col ; j++ {
+			result.mat[i][j] = tmp.mat[j][0]
+		}
 
-func (l *CrossEntropyLayer) forward(x *Matrix, y *Matrix) *Matrix {
-	var (
-		loss float64
-		tmp = x.getCopy().log()
-		result = &Matrix{row: 1, col: 1, mat: make([][]float64, 1)}
-	)
-
-	result.mat[0] = make([]float64, 1)
-
-	for i := 0 ; i < tmp.row ; i++ {
-		loss += -1.0 * tmp.mat[i][0] * y.mat[i][0]
-	}
-
-	result.mat[0][0] = loss
-	l.Y = result
-	l.X = x
+	}	
 
 	return result
 
 }
 
-func (l *CrossEntropyLayer) backward() *Matrix {
 
-	// return result.mul(z)
-	return &Matrix{}
+// x: N x c
+// output: real value
+func (l *CrossEntropyLayer) forward(x *Matrix, y []int) float64 {
+	var (
+		loss float64
+		tmp = x.getCopy().log()
+	)
+
+	for i := 0 ; i < tmp.row ; i++ {
+		loss -= tmp.mat[i][y[i]]
+	}
+
+	l.Y = y
+	l.X = x
+
+	return loss/float64(x.row)
 }
 
+// output: N x c
+func (l *CrossEntropyLayer) backward() *Matrix {
 
+	result := getZeroMat(l.X.row, l.X.col)
 
+	for i := 0 ; i < result.row ; i++ {
+		result.mat[i][l.Y[i]] -= 1/l.X.mat[i][l.Y[i]]/float64(l.X.row) // -yi/pi
+	}
 
+	return result
+}
