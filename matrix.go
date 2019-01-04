@@ -282,3 +282,15 @@ func initMatrix(data [][]float64) *Matrix {
 
 	return result
 }
+
+func diagMatrix(data []float64) *Matrix {
+	size := len(data)
+	result := &Matrix{row: size, col: size, mat: make([][]float64, size)}
+
+	for i := 0 ; i < size ; i++ {
+		result.mat[i] = make([]float64, size)
+		result.mat[i][i] = data[i]
+	}
+
+	return result
+}
