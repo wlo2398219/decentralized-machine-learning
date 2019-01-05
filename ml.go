@@ -11,9 +11,17 @@ import (
 
 var (
 	gradCh          chan *GradientPacket
-	nameIDTable     = map[string]bool{} // used to record if I receive the weight from this peer in the given round
-	feature, weight = load_data("uci_cbm_dataset.txt") // the dataset we use for testing now: feature contains X(Val) and Y(Output), weight is a 0-vector
-	// feature_test, _ = load_data("uci_cbm_dataset_test.txt")
+	nameIDTable     = map[string]bool{}                // used to record if I receive the weight from this peer in the given round
+	dataset string
+	feature FeatureType
+	// mnistFeature, mnistWeight = mnist_dataset()
+	fcLayer = newLinearLayer(500, 10)
+	smLayer = SoftmaxLayer{}  
+	ceLayer = CrossEntropyLayer{}
+	globalX *Matrix
+	globalY []int
+
+	SAMPLE = 1000
 )
 
 // Input
@@ -38,6 +46,7 @@ type OutputType struct {
 
 type WeightPacket struct {
 	Org    string
+	Dataset   string
 	IterID int
 	Weight *WeightType
 }
@@ -45,6 +54,7 @@ type WeightPacket struct {
 type GradientPacket struct {
 	Org      string
 	Dst      string
+	Dataset     string
 	IterID   int
 	Gradient WeightType
 }
@@ -53,8 +63,39 @@ type GradientPacket struct {
 func handleWeight(conn *net.UDPConn, packet *WeightPacket) {
 	// sendWeight
 	// sendGradient
-	fmt.Println("==== HANDLE WEIGHT PACKET", packet, " ====")
+
+	var (
+		grad WeightType
+		// matX *Matrix
+		// Y []int
+	)
+
+	// fmt.Println("==== HANDLE WEIGHT PACKET", packet, " ====")
+	// fmt.Println("ORG:",packet.Org)
+	// fmt.Println("DATANAME:",packet.Dataset)
+	// fmt.Println("ID:",packet.IterID)
+	// fmt.Println("WEIGHT:",packet.Weight)
+
+	if packet.Org == *name {
+		return 
+	}
+
 	key := packet.Org + strconv.Itoa(packet.IterID)
+
+	if dataset == "" {
+		if packet.Dataset != "mnist" {
+			feature, _ = load_data(packet.Dataset)
+			fmt.Println("KIDDING ME???", packet.Dataset)
+		} else {
+			globalX, globalY = mnist_dataset(SAMPLE)
+			fmt.Println("==== load mnist ====")
+			// fmt.Println()
+		}
+
+		dataset = packet.Dataset
+	} else {
+		fmt.Println("HANDLE WEIGHT, DATASET:", dataset)
+	}
 
 	if _, exist := nameIDTable[key]; exist {
 		return
@@ -62,9 +103,16 @@ func handleWeight(conn *net.UDPConn, packet *WeightPacket) {
 		nameIDTable[key] = true
 		// broadcast
 		broadcastWeight(conn, packet)
-		// fmt.Println("=== MY WEIGHT ===")
-		grad := grad_f(feature, weight, "mse", "", 0)
+
+		if packet.Dataset != "mnist" {
+			grad = grad_f(feature, *packet.Weight, "mse", "", 0)
+		} else {
+			fmt.Println("==== grad_f_nn ====")
+			grad = grad_f_nn(*packet.Weight, globalX, globalY)
+		}
+		
 		sendGradient(conn, &GradientPacket{Org: *name, Dst: packet.Org, IterID: packet.IterID, Gradient: grad}, packet.Org)
+
 	}
 
 }
@@ -86,6 +134,11 @@ func handleGradient(conn *net.UDPConn, packet *GradientPacket) {
 // broadcast the weight to other peers, used by the one announcing the training
 func broadcastWeight(conn *net.UDPConn, packet *WeightPacket) {
 	// not shared
+	// fmt.Println("===== IN broadcastWeight =====")
+	// fmt.Println("ORG:",packet.Org)
+	// fmt.Println("DATANAME:",packet.Dataset)
+	// fmt.Println("ID:",packet.IterID)
+	// fmt.Println("WEIGHT:",packet.Weight)
 	packet1 := GossipPacket{WeightPacket: packet}
 	for peer := range peer_list.Iter() {
 		fmt.Println("==== BROADCAST WEIGHT TO", peer, " ====")
@@ -100,34 +153,64 @@ func sendGradient(conn *net.UDPConn, packet *GradientPacket, Dst string) {
 	// private message
 	gossipPacket := GossipPacket{GradientPacket: packet}
 
+	if Dst == *name {
+		return
+	}
+
 	if _, exist := nextHopTable[Dst]; exist {
 		_ = sendPacketToAddr(conn, gossipPacket, nextHopTable[Dst].NextHop)
 	} else {
-		fmt.Println("==== DON'T KNOW THE DESTINATION OF THE GRADIENT ====")
+		fmt.Println("==== DON'T KNOW THE DESTINATION OF THE GRADIENT ====", Dst)
 	}
 
 }
 
 // func newTrainig() chan<- *GradientPacket {
-func newTraining(conn *net.UDPConn) {
+
+func newTraining(conn *net.UDPConn, dataName string) {
 	// load dataset
 	gradCh = make(chan *GradientPacket)
 
-	fmt.Println("MY INIT WEIGHTS")
-	fmt.Println(weight.Val)
-	go byzantineSGD(conn)
-	//go distributedSGD(conn)
+	dataset = dataName
+
+	// fmt.Println("MY INIT WEIGHTS")
+	// fmt.Println(weight.Val)
+
+	// go byzantineSGD(conn, dataName)
+	go distributedSGD(conn, dataName)
 }
 
-func distributedSGD(conn *net.UDPConn) {
+func distributedSGD(conn *net.UDPConn, dataName string) {
+
 	// for iteration
 	// for select <- ch
+	// the dataset we use for testing now: feature contains X(Val) and Y(Output), weight is a 0-vector
+	var (
+		weight WeightType
+		matX *Matrix
+		Y []int
+		// loss_train float64
+	)
+
+	if dataName != "mnist" {
+		fmt.Println("==== LOAD", dataName, "====")
+		feature, weight = load_data(dataName)
+	} else {
+		matX, Y = mnist_dataset(SAMPLE)
+		fcLayer = newLinearLayer(500, 10)
+		weight = flattenWB(fcLayer.W, fcLayer.B)
+		// fmt.Println(" =====  mnist ===== ")
+		// matX.print()
+	}
+
 	k, d := 5, len(weight.Val) // k is #weights to be got, d is the dimension of weight
-	gamma := 0.0000000001 // gamma is learning step size
+	// gamma := 0.0000000001      // gamma is learning step size
+	gamma := 5 * 1e-3     // gamma is learning step size
 
+	fmt.Println("DATASET:   ", dataName)
 	for round := 0; round < 10; round++ {
-
-		broadcastWeight(conn, &WeightPacket{Org: *name, IterID: round, Weight: &weight})
+		broadcastWeight(conn, &WeightPacket{Org: *name, IterID: round, Dataset:dataName, Weight: &weight})
+		
 		fmt.Println("====== TRAINING EPOCH", round, "======")
 
 		// used to save sum(grad)
@@ -144,7 +227,7 @@ func distributedSGD(conn *net.UDPConn) {
 					i++
 
 					fmt.Println("===== GET GRADIENT FROM", ch.Org, "=====")
-					fmt.Println(ch.Gradient.Val)
+					// fmt.Println(ch.Gradient.Val)
 					for j := range updates {
 						updates[j] += ch.Gradient.Val[j]
 					}
@@ -158,15 +241,29 @@ func distributedSGD(conn *net.UDPConn) {
 			weight.Val[i] = weight.Val[i] - gamma*updates[i]/float64(k)
 		}
 
-		fmt.Println("CURRENT WEIGHTS:", weight.Val)
+		// fmt.Println("CURRENT WEIGHTS:", weight.Val)
 
-		loss_train := f(feature, weight, "mse", "", 0)
+		if dataName != "mnist" {
+			loss_train := f(feature, weight, "mse", "", 0)
+			fmt.Println("LOSS:", loss_train) //, ", TEST LOSS:", loss_test)
+
+		} else {
+			fcLayer.W, fcLayer.B = deFlatten(weight.Val)
+			nnOutput := fcLayer.forward(matX)
+			smOutput := smLayer.forward(nnOutput)
+			loss_train := ceLayer.forward(smOutput, Y)
+			fmt.Println("LOSS in mnist:", loss_train) //, ", TEST LOSS:", loss_test)
+		}
+
 		// loss_test  := f(feature_test,  weight, "mse", "", 0)
-		fmt.Println("LOSS:", loss_train)//, ", TEST LOSS:", loss_test)
 	}
 }
 
-func byzantineSGD(conn *net.UDPConn) {
+func byzantineSGD(conn *net.UDPConn, dataName string) {
+
+	var weight WeightType
+	feature, weight = load_data(dataName)
+
 	// Parameter.
 	byzF := 1
 
@@ -179,10 +276,10 @@ func byzantineSGD(conn *net.UDPConn) {
 	recentPeers := make([]string, 0)
 
 	// Dampening component as described in the paper sec 3.2.
-	dampening := func (delay float64) float64 { return math.Exp(-0.2 * delay) }
+	dampening := func(delay float64) float64 { return math.Exp(-0.2 * delay) }
 
 	// Lipschitz filter as described in the paper sec 3.1.
-	lipschitzFilter := func (grad *GradientPacket) bool {
+	lipschitzFilter := func(grad *GradientPacket) bool {
 		ok := false
 		cnt := 0
 		gradientEvo := sliceToMat(grad.Gradient.Val).
@@ -196,16 +293,25 @@ func byzantineSGD(conn *net.UDPConn) {
 
 		for peer, _ := range nextHopTable {
 			lastPeerGradient, exist := lastPeerGradients[peer]
-			if !exist { ok = true; break }
+			if !exist {
+				ok = true
+				break
+			}
 			lastPeerWeight, exist := lastPeerWeights[peer]
-			if !exist { ok = true; break }
+			if !exist {
+				ok = true
+				break
+			}
 
 			peerGradientEvo := sliceToMat(grad.Gradient.Val).
 				sub(sliceToMat(lastPeerGradient.Val)).norm(2)
 			peerModelEvo := sliceToMat(weightHistory[grad.IterID].Val).
 				sub(sliceToMat(lastPeerWeight.Val)).norm(2)
 
-			if peerModelEvo < 1e-9 { ok = true; break }
+			if peerModelEvo < 1e-9 {
+				ok = true
+				break
+			}
 			peerLC := peerGradientEvo / (peerModelEvo + 1e-9)
 
 			if peerLC < newLC {
@@ -213,7 +319,7 @@ func byzantineSGD(conn *net.UDPConn) {
 			}
 		}
 
-		if cnt <= len(nextHopTable) - byzF {
+		if cnt <= len(nextHopTable)-byzF {
 			ok = true
 		}
 
@@ -221,7 +327,7 @@ func byzantineSGD(conn *net.UDPConn) {
 	}
 
 	// Frequency filter as described in the paper sec 3.1.
-	frequencyFilter := func (grad *GradientPacket) bool {
+	frequencyFilter := func(grad *GradientPacket) bool {
 		ok := true
 		for _, peer := range recentPeers {
 			if peer == grad.Org {
@@ -231,21 +337,20 @@ func byzantineSGD(conn *net.UDPConn) {
 		return ok
 	}
 
-
 	m := 1
-	d := len(weight.Val) // k is #weights to be got, d is the dimension of weight
+	d := len(weight.Val)  // k is #weights to be got, d is the dimension of weight
 	gamma := 0.0000000001 // gamma is learning step size
 
 	weightHistory = append(weightHistory, weight)
 	for round := 0; round < 100; round++ {
 		fmt.Println("====== TRAINING ITERATION", round, "======")
-		broadcastWeight(conn, &WeightPacket{Org: *name, IterID: round, Weight: &weight})
+		broadcastWeight(conn, &WeightPacket{Org: *name, IterID: round, Weight: &weight, Dataset: dataName})
 
 		// used to save sum(grad)
 		updates := make([]float64, d)
 		count := 0
 
-		for ; count < m; {
+		for count < m {
 			grad := <-gradCh
 			fmt.Println("===== GET GRADIENT FROM", grad.Org, "=====")
 			fmt.Println(grad.Gradient.Val, lipschitzFilter(grad), frequencyFilter(grad))
@@ -260,7 +365,7 @@ func byzantineSGD(conn *net.UDPConn) {
 				// Update history list for the filters.
 				lastPeerWeights[grad.Org] = weight
 				lastPeerGradients[grad.Org] = grad.Gradient
-				if len(recentPeers) == 2 * byzF {
+				if len(recentPeers) == 2*byzF {
 					recentPeers = recentPeers[1:]
 				}
 				recentPeers = append(recentPeers, grad.Org)
@@ -279,10 +384,9 @@ func byzantineSGD(conn *net.UDPConn) {
 
 		loss_train := f(feature, weight, "mse", "", 0)
 		// loss_test  := f(feature_test,  weight, "mse", "", 0)
-		fmt.Println("LOSS:", loss_train)//, ", TEST LOSS:", loss_test)
+		fmt.Println("LOSS:", loss_train) //, ", TEST LOSS:", loss_test)
 	}
 }
-
 
 // f: loss function
 // lambda: for regularziation -> lambda * regularization
@@ -337,8 +441,64 @@ func f(x FeatureType, w WeightType, loss_type, regularization string, lambda flo
 
 	return loss
 }
+
+func grad_f_nn(w WeightType, matX *Matrix, Y []int) WeightType {
+	var grad = WeightType{Val: make([]float64, len(w.Val))}
+	ind := 0
+	wx := &Matrix{row: 10, col: 500, mat: make([][]float64, 10)}
+	bx := &Matrix{row: 10, col: 1, mat: make([][]float64, 10)}
+
+	for i := 0 ; i < wx.row ; i++ {
+		wx.mat[i] = make([]float64, wx.col)
+
+		for j := 0 ; j < wx.col ; j++ {
+			wx.mat[i][j] = w.Val[ind]
+			ind++
+		}
+	}
+
+	for i := 0 ; i < bx.row ; i++ {
+		bx.mat[i] = make([]float64, bx.col)
+		bx.mat[i][0] = w.Val[ind]
+		ind++
+	}
+
+	fcLayer.W = wx
+	fcLayer.B = bx
+	fcLayer.DW = getZeroMat(wx.row, wx.col)
+	fcLayer.DB = getZeroMat(bx.row, 1)
+
+	// fmt.Println("===== matX =====")
+	// matX.print()
+
+	nnOutput := fcLayer.forward(matX)
+	smOutput := smLayer.forward(nnOutput)
+	_ = ceLayer.forward(smOutput, Y)
+
+	back := ceLayer.backward()
+	back = smLayer.backward(back)
+	fcLayer.backward(back)
+
+	ind = 0
+
+	for i := 0 ; i < wx.row ; i++ {
+		for j := 0 ; j < wx.col ; j++ {
+			grad.Val[ind] = fcLayer.DW.mat[i][j]
+			ind++
+		}
+	}
+
+	for i := 0 ; i < bx.row ; i++ {
+		grad.Val[ind] = fcLayer.DB.mat[i][0]
+	}
+
+	return grad
+}
+
+
 func grad_f(x FeatureType, w WeightType, loss_type, regularization string, lambda float64) WeightType {
 
+	// fmt.Println(x)
 	if len(x.Val[0]) != len(w.Val) {
 		log.Fatal("INCONSISTENCY OF DIMENSION IN f")
 	}
@@ -445,4 +605,44 @@ func logistic_loss(x *Matrix, w *Matrix, y *Matrix) OutputType {
 	fmt.Println("LOSS DIMENSION:", loss.row, loss.col)
 
 	return OutputType{Val: -loss.mat[0][0] / N}
+}
+
+
+func flattenWB (w *Matrix, b *Matrix) WeightType {
+	ind := 0
+	weights := make([]float64, 5010)
+
+	for i := 0 ; i < w.row ; i++ {
+		for j := 0 ; j < w.col ; j++ {
+			weights[ind] = w.mat[i][j]
+			ind++
+		}
+	}
+
+	for i := 0 ; i < b.row ; i++ {
+		weights[ind] = b.mat[i][0]
+		ind++
+	}
+
+	return WeightType{Val: weights}
+}
+
+func deFlatten(weights []float64) (*Matrix, *Matrix) {
+	wx := getZeroMat(10, 500)
+	bx := getZeroMat(10, 1)
+	ind := 0
+
+	for i := 0 ; i < wx.row ; i++ {
+		for j := 0 ; j < wx.col ; j++ {
+			wx.mat[i][j] = weights[ind] 
+			ind++
+		}
+	}
+
+	for i := 0 ; i < bx.row ; i++ {
+		bx.mat[i][0] = weights[ind] 
+		ind++
+	}
+
+	return wx, bx
 }

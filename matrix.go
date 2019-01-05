@@ -14,7 +14,7 @@ type Matrix struct {
 func (m1 *Matrix) mul(m2 *Matrix) *Matrix {
 
 	if m1.col != m2.row {
-		log.Fatal("INCONSISTENCY OF DIMENSION m1:", m1.col, "m2:", m2.row)
+		log.Fatal("INCONSISTENCY OF DIMENSION in mul m1:", m1.row, "x", m1.col, "m2:", m2.row, "x", m2.col)
 	}
 
 	var result = &Matrix{row: m1.row, col: m2.col, mat: make([][]float64, m1.row)}
@@ -51,7 +51,7 @@ func (m1 *Matrix) sub(m2 *Matrix) *Matrix {
 
 func (m1 *Matrix) add(m2 *Matrix) *Matrix {
 	if m1.row != m2.row || m1.col != m2.col {
-		log.Fatal("INCONSISTENCY OF DIMENSION in substraction")
+		log.Fatal("INCONSISTENCY OF DIMENSION in add in substraction")
 	}
 	var result = m1.getCopy()
 	// var result = &Matrix{row: m1.row, col: m1.col, mat: m1.mat}
@@ -88,7 +88,7 @@ func (m *Matrix) norm(p float64) float64 {
 			ans += math.Pow(m.mat[i][j], p)
 		}
 	}
-	return math.Pow(ans, 1 / p)
+	return math.Pow(ans, 1/p)
 }
 
 func (m *Matrix) getCopy() *Matrix {
@@ -265,11 +265,10 @@ func sliceToMat(v []float64) *Matrix {
 	return result
 }
 
-
 func getZeroMat(r, c int) *Matrix {
 	result := &Matrix{row: r, col: c, mat: make([][]float64, r)}
 
-	for i := 0 ; i < r ; i++ {
+	for i := 0; i < r; i++ {
 		result.mat[i] = make([]float64, c)
 	}
 
@@ -287,7 +286,7 @@ func diagMatrix(data []float64) *Matrix {
 	size := len(data)
 	result := &Matrix{row: size, col: size, mat: make([][]float64, size)}
 
-	for i := 0 ; i < size ; i++ {
+	for i := 0; i < size; i++ {
 		result.mat[i] = make([]float64, size)
 		result.mat[i][i] = data[i]
 	}

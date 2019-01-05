@@ -40,7 +40,7 @@ var (
 
 	gossiper_peer *Gossiper
 
-	MAX_PACKET_SIZE = 10240
+	MAX_PACKET_SIZE = 102400
 )
 
 func main() {
@@ -386,7 +386,9 @@ func handleClient(ch chan *GossipPacket, gossiper *Gossiper, fileData map[string
 				}
 			case "TRAIN":
 				fmt.Println("---- TRAINING REQUEST ----", msg.Simple.Contents)
-				newTraining(gossiper.conn)
+				newTraining(gossiper.conn, "mnist")  //  dataset
+				// newTraining(gossiper.conn, "uci_cbm_dataset.txt")  //  dataset
+				
 			}
 		} else if msg.Private != nil { // PRIVATE MESSAGE
 
@@ -424,11 +426,11 @@ func sendPacketToAddr(conn *net.UDPConn, gossipPacket GossipPacket, dst_addr str
 		fmt.Println("ERROR!!!!!!! ")
 		fmt.Println(err1)
 	}
-	if gossipPacket.WeightPacket != nil {
-		fmt.Println("==== SEND WEIGHTPACKET TO", dst_addr, "====")
-		fmt.Println(gossipPacket.WeightPacket.Weight)
+	// if gossipPacket.WeightPacket != nil {
+		// fmt.Println("==== SEND WEIGHTPACKET TO", dst_addr, "====")
+		// fmt.Println(gossipPacket.WeightPacket.Weight)
 		// fmt.Println(packetBytes)
-	}
+	// }
 
 	if err != nil {
 		log.Fatal(err)
