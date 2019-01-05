@@ -11,7 +11,10 @@ cd ..
 ./finalproject -gossipAddr=127.0.0.1:5005 -UIPort=10005 -name=F -peers=127.0.0.1:5000 -rtimer=1 > F.out &
 sleep 5
 
-./client/client -UIPort=10000 -train -file="bla"
+./client/client -UIPort=10000 -train -file="mnist"
+# ./client/client -UIPort=10000 -train -file="uci_cbm_dataset.txt"
+
+
 # sleep 20
 
 # pkill -f finalproject

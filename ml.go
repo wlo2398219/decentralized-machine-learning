@@ -176,8 +176,8 @@ func newTraining(conn *net.UDPConn, dataName string) {
 	// fmt.Println("MY INIT WEIGHTS")
 	// fmt.Println(weight.Val)
 
-	// go byzantineSGD(conn, dataName)
-	go distributedSGD(conn, dataName)
+	go byzantineSGD(conn, dataName)
+	// go distributedSGD(conn, dataName)
 }
 
 func distributedSGD(conn *net.UDPConn, dataName string) {
@@ -189,7 +189,7 @@ func distributedSGD(conn *net.UDPConn, dataName string) {
 		weight WeightType
 		matX *Matrix
 		Y []int
-		// loss_train float64
+		gamma float64
 	)
 
 	if dataName != "mnist" {
@@ -204,8 +204,12 @@ func distributedSGD(conn *net.UDPConn, dataName string) {
 	}
 
 	k, d := 5, len(weight.Val) // k is #weights to be got, d is the dimension of weight
-	// gamma := 0.0000000001      // gamma is learning step size
-	gamma := 5 * 1e-3     // gamma is learning step size
+	
+	if dataName != "mnist" {
+		gamma = 0.0000000001      // gamma is learning step size
+	} else {
+		gamma = 5 * 1e-3     // gamma is learning step size
+	}
 
 	fmt.Println("DATASET:   ", dataName)
 	for round := 0; round < 10; round++ {
@@ -261,8 +265,24 @@ func distributedSGD(conn *net.UDPConn, dataName string) {
 
 func byzantineSGD(conn *net.UDPConn, dataName string) {
 
-	var weight WeightType
-	feature, weight = load_data(dataName)
+	// var weight WeightType
+	var (
+		weight WeightType
+		matX *Matrix
+		Y []int
+		gamma float64
+	)
+	// feature, weight = load_data(dataName)
+
+	if dataName != "mnist" {
+		fmt.Println("==== LOAD", dataName, "====")
+		feature, weight = load_data(dataName)
+	} else {
+		matX, Y = mnist_dataset(SAMPLE)
+		fcLayer = newLinearLayer(500, 10)
+		weight = flattenWB(fcLayer.W, fcLayer.B)
+	}
+
 
 	// Parameter.
 	byzF := 1
@@ -339,7 +359,14 @@ func byzantineSGD(conn *net.UDPConn, dataName string) {
 
 	m := 1
 	d := len(weight.Val)  // k is #weights to be got, d is the dimension of weight
-	gamma := 0.0000000001 // gamma is learning step size
+	// gamma := 0.0000000001 // gamma is learning step size
+
+	if dataName != "mnist" {
+		gamma = 0.0000000001      // gamma is learning step size
+	} else {
+		gamma = 5 * 1e-3     // gamma is learning step size
+	}
+
 
 	weightHistory = append(weightHistory, weight)
 	for round := 0; round < 100; round++ {
@@ -353,7 +380,7 @@ func byzantineSGD(conn *net.UDPConn, dataName string) {
 		for count < m {
 			grad := <-gradCh
 			fmt.Println("===== GET GRADIENT FROM", grad.Org, "=====")
-			fmt.Println(grad.Gradient.Val, lipschitzFilter(grad), frequencyFilter(grad))
+			// fmt.Println(grad.Gradient.Val, lipschitzFilter(grad), frequencyFilter(grad))
 			if lipschitzFilter(grad) && frequencyFilter(grad) {
 				delay := float64(round - grad.IterID)
 				for j := range updates {
@@ -380,11 +407,23 @@ func byzantineSGD(conn *net.UDPConn, dataName string) {
 		}
 		weightHistory = append(weightHistory, weight)
 
-		fmt.Println("CURRENT WEIGHTS:", weight.Val)
+		// fmt.Println("CURRENT WEIGHTS:", weight.Val)
 
-		loss_train := f(feature, weight, "mse", "", 0)
-		// loss_test  := f(feature_test,  weight, "mse", "", 0)
-		fmt.Println("LOSS:", loss_train) //, ", TEST LOSS:", loss_test)
+		if dataName != "mnist" {
+			loss_train := f(feature, weight, "mse", "", 0)
+			fmt.Println("LOSS:", loss_train) //, ", TEST LOSS:", loss_test)
+
+		} else {
+			fcLayer.W, fcLayer.B = deFlatten(weight.Val)
+			nnOutput := fcLayer.forward(matX)
+			smOutput := smLayer.forward(nnOutput)
+			loss_train := ceLayer.forward(smOutput, Y)
+			fmt.Println("LOSS in mnist:", loss_train) //, ", TEST LOSS:", loss_test)
+		}
+
+		// loss_train := f(feature, weight, "mse", "", 0)
+		// // loss_test  := f(feature_test,  weight, "mse", "", 0)
+		// fmt.Println("LOSS:", loss_train) //, ", TEST LOSS:", loss_test)
 	}
 }
 

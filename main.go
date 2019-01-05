@@ -386,7 +386,7 @@ func handleClient(ch chan *GossipPacket, gossiper *Gossiper, fileData map[string
 				}
 			case "TRAIN":
 				fmt.Println("---- TRAINING REQUEST ----", msg.Simple.Contents)
-				newTraining(gossiper.conn, "mnist")  //  dataset
+				newTraining(gossiper.conn, msg.Simple.Contents)  //  dataset
 				// newTraining(gossiper.conn, "uci_cbm_dataset.txt")  //  dataset
 				
 			}
