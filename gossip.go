@@ -16,7 +16,7 @@ func rumorMongering(conn *net.UDPConn, sender, mongerIP string, ch chan *StatusP
 	_, err := conn.WriteToUDP(msgBytes, dst)
 
 	if err != nil {
-		fmt.Println("ERROR in  Mongering")
+		fmt.Println("ERROR in Mongering!!!", err)
 	}
 
 	if sender != "" {
@@ -24,7 +24,7 @@ func rumorMongering(conn *net.UDPConn, sender, mongerIP string, ch chan *StatusP
 		err = sendPacketToAddr(conn, GossipPacket{Status: &status}, sender)
 
 		if err != nil {
-			fmt.Println("ERROR in  Mongering")
+			fmt.Println("ERROR in Mongering!!!", err)
 		}
 	}
 	var timer = time.NewTimer(time.Second)

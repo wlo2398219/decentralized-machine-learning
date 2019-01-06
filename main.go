@@ -40,7 +40,7 @@ var (
 
 	gossiper_peer *Gossiper
 
-	MAX_PACKET_SIZE = 102400
+	MAX_PACKET_SIZE = 65536
 )
 
 func main() {

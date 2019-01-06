@@ -173,6 +173,13 @@ func newTraining(conn *net.UDPConn, dataName string) {
 
 	dataset = dataName
 
+	if dataName != "mnist" {
+		feature, _ = load_data(dataName)
+	} else {
+		globalX, globalY = mnist_dataset(SAMPLE)
+	}
+
+
 	// fmt.Println("MY INIT WEIGHTS")
 	// fmt.Println(weight.Val)
 
@@ -190,6 +197,7 @@ func distributedSGD(conn *net.UDPConn, dataName string) {
 		matX *Matrix
 		Y []int
 		gamma float64
+		grad WeightType
 	)
 
 	if dataName != "mnist" {
@@ -203,7 +211,8 @@ func distributedSGD(conn *net.UDPConn, dataName string) {
 		// matX.print()
 	}
 
-	k, d := 5, len(weight.Val) // k is #weights to be got, d is the dimension of weight
+	// k, d := 9, len(weight.Val) // k is #weights to be got, d is the dimension of weight
+	k := 5 // k is #weights to be got, d is the dimension of weight
 	
 	if dataName != "mnist" {
 		gamma = 0.0000000001      // gamma is learning step size
@@ -218,7 +227,16 @@ func distributedSGD(conn *net.UDPConn, dataName string) {
 		fmt.Println("====== TRAINING EPOCH", round, "======")
 
 		// used to save sum(grad)
-		updates := make([]float64, d)
+		// updates := make([]float64, d)
+
+		if dataName != "mnist" {
+			grad = grad_f(feature, weight, "mse", "", 0)
+		} else {
+			fmt.Println("==== grad_f_nn ====")
+			grad = grad_f_nn(weight, globalX, globalY)
+		}
+
+		updates := grad.Val
 
 		for i := 0; i < k; {
 
@@ -240,9 +258,10 @@ func distributedSGD(conn *net.UDPConn, dataName string) {
 			}
 		}
 
+		fmt.Println("ENOUGH GRADIENT")
 		// update the weight
 		for i := range updates {
-			weight.Val[i] = weight.Val[i] - gamma*updates[i]/float64(k)
+			weight.Val[i] = weight.Val[i] - gamma*updates[i]/float64(k+1)
 		}
 
 		// fmt.Println("CURRENT WEIGHTS:", weight.Val)
@@ -271,6 +290,7 @@ func byzantineSGD(conn *net.UDPConn, dataName string) {
 		matX *Matrix
 		Y []int
 		gamma float64
+		grad WeightType
 	)
 	// feature, weight = load_data(dataName)
 
@@ -358,7 +378,7 @@ func byzantineSGD(conn *net.UDPConn, dataName string) {
 	}
 
 	m := 1
-	d := len(weight.Val)  // k is #weights to be got, d is the dimension of weight
+	// d := len(weight.Val)  // k is #weights to be got, d is the dimension of weight
 	// gamma := 0.0000000001 // gamma is learning step size
 
 	if dataName != "mnist" {
@@ -374,7 +394,18 @@ func byzantineSGD(conn *net.UDPConn, dataName string) {
 		broadcastWeight(conn, &WeightPacket{Org: *name, IterID: round, Weight: &weight, Dataset: dataName})
 
 		// used to save sum(grad)
-		updates := make([]float64, d)
+		// updates := make([]float64, d)
+
+
+		if dataName != "mnist" {
+			grad = grad_f(feature, weight, "mse", "", 0)
+		} else {
+			fmt.Println("==== grad_f_nn ====")
+			grad = grad_f_nn(weight, globalX, globalY)
+		}
+
+		updates := grad.Val
+
 		count := 0
 
 		for count < m {
