@@ -7,6 +7,8 @@ import (
 	"math"
 	"net"
 	"strconv"
+	"time"
+	"math/rand"
 )
 
 var (
@@ -76,6 +78,8 @@ func handleWeight(conn *net.UDPConn, packet *WeightPacket) {
 	// fmt.Println("ID:",packet.IterID)
 	// fmt.Println("WEIGHT:",packet.Weight)
 
+	fmt.Println("HANDLE WEIGHT IN ROUND", packet.IterID)
+
 	if packet.Org == *name {
 		return 
 	}
@@ -102,6 +106,7 @@ func handleWeight(conn *net.UDPConn, packet *WeightPacket) {
 	} else {
 		nameIDTable[key] = true
 		// broadcast
+
 		broadcastWeight(conn, packet)
 
 		if packet.Dataset != "mnist" {
@@ -110,7 +115,8 @@ func handleWeight(conn *net.UDPConn, packet *WeightPacket) {
 			fmt.Println("==== grad_f_nn ====")
 			grad = grad_f_nn(*packet.Weight, globalX, globalY)
 		}
-		
+
+		time.Sleep(time.Duration(rand.Intn(5000)) * time.Millisecond)		
 		sendGradient(conn, &GradientPacket{Org: *name, Dst: packet.Org, IterID: packet.IterID, Gradient: grad}, packet.Org)
 
 	}
@@ -158,7 +164,9 @@ func sendGradient(conn *net.UDPConn, packet *GradientPacket, Dst string) {
 	}
 
 	if _, exist := nextHopTable[Dst]; exist {
+		
 		_ = sendPacketToAddr(conn, gossipPacket, nextHopTable[Dst].NextHop)
+		fmt.Println("SEND GRADIENT TO", Dst, "FROM", packet.Org, "IN ROUND", packet.IterID)
 	} else {
 		fmt.Println("==== DON'T KNOW THE DESTINATION OF THE GRADIENT ====", Dst)
 	}
@@ -212,7 +220,7 @@ func distributedSGD(conn *net.UDPConn, dataName string) {
 	}
 
 	// k, d := 9, len(weight.Val) // k is #weights to be got, d is the dimension of weight
-	k := 5 // k is #weights to be got, d is the dimension of weight
+	k := 2 // k is #weights to be got, d is the dimension of weight
 	
 	if dataName != "mnist" {
 		gamma = 0.0000000001      // gamma is learning step size
@@ -221,7 +229,8 @@ func distributedSGD(conn *net.UDPConn, dataName string) {
 	}
 
 	fmt.Println("DATASET:   ", dataName)
-	for round := 0; round < 10; round++ {
+	for round := 0; round < 30; round++ {
+
 		broadcastWeight(conn, &WeightPacket{Org: *name, IterID: round, Dataset:dataName, Weight: &weight})
 		
 		fmt.Println("====== TRAINING EPOCH", round, "======")
@@ -239,7 +248,7 @@ func distributedSGD(conn *net.UDPConn, dataName string) {
 		updates := grad.Val
 
 		for i := 0; i < k; {
-
+			fmt.Println("WAIT FOR GRAIDENT...")
 			select {
 
 			case ch := <-gradCh:
@@ -445,6 +454,7 @@ func byzantineSGD(conn *net.UDPConn, dataName string) {
 			fmt.Println("LOSS:", loss_train) //, ", TEST LOSS:", loss_test)
 
 		} else {
+			// fmt.Println("dimension:", matX.row, matX.col)
 			fcLayer.W, fcLayer.B = deFlatten(weight.Val)
 			nnOutput := fcLayer.forward(matX)
 			smOutput := smLayer.forward(nnOutput)
@@ -560,6 +570,7 @@ func grad_f_nn(w WeightType, matX *Matrix, Y []int) WeightType {
 
 	for i := 0 ; i < bx.row ; i++ {
 		grad.Val[ind] = fcLayer.DB.mat[i][0]
+		ind++
 	}
 
 	return grad

@@ -27,20 +27,21 @@ do
 done
 
 UIPort=10000
-gossipPort=5000
+gossipPort=0
 name='A'
+nNode=10
 
-for i in `seq 1 10`;
+for i in `seq 1 $nNode`;
 do
 	cd $name
 	outFileName="$name.out"
-	peerPort=$((($gossipPort+1)%10+5000))
+	peerPort=$((($gossipPort+1)%$nNode+5000))
 	peer="127.0.0.1:$peerPort"
-	gossipAddr="127.0.0.1:$gossipPort"
-	./finalproject -UIPort=$UIPort -gossipAddr=$gossipAddr -name=$name -peers=$peer -rtimer=1 > $outFileName &
+	gossipAddr="127.0.0.1:$(($gossipPort+5000))"
+	echo "$name running at UIPort $UIPort and gossipAddr $gossipAddr and peer $peer"
+	./finalproject -UIPort=$UIPort -gossipAddr=$gossipAddr -name=$name -peers=$peer -rtimer=5 > $outFileName &
 	outputFiles+=("$outFileName")
 
-	echo "$name running at UIPort $UIPort and gossipPort $gossipPort"
 	UIPort=$(($UIPort+1))
 	gossipPort=$(($gossipPort+1))
 	name=$(echo "$name" | tr "A-Y" "B-Z")
@@ -50,6 +51,7 @@ done
 
 sleep 10
 
+# ./A/client -UIPort=10000 -train -file="mnist"
 ./A/client -UIPort=10000 -train -file="mnist"
 
 

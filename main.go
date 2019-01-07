@@ -46,7 +46,8 @@ var (
 func main() {
 	// parse the flags
 	flag.Parse()
-	rand.Seed(time.Now().UTC().UnixNano())
+	// rand.Seed(time.Now().UTC().UnixNano())
+	rand.Seed(int64(*UIPort))
 
 	status.Want = append(status.Want, PeerStatus{Identifier: *name, NextID: 1})
 	status_index[*name] = 0
@@ -54,6 +55,8 @@ func main() {
 	gossiper_peer = NewGossiper(*gossipAddr, *name)
 	UIAddr := "127.0.0.1:" + strconv.Itoa(*UIPort)
 	chClientPacket := make(chan *GossipPacket)
+
+
 
 	var (
 		wg sync.WaitGroup
@@ -197,12 +200,12 @@ func handleGossiper(gossiper *Gossiper, fileData map[string]*mFile) {
 			}
 
 		} else if msg.Status != nil { // STATUS PACKET
-			fmt.Print("STATUS from " + relaySender)
-			for _, s := range msg.Status.Want {
-				fmt.Print(" peer " + s.Identifier + " nextID " + strconv.Itoa(int(s.NextID)))
-			}
-			fmt.Println()
-			printPeerInfo()
+			// fmt.Print("STATUS from " + relaySender)
+			// for _, s := range msg.Status.Want {
+			// 	fmt.Print(" peer " + s.Identifier + " nextID " + strconv.Itoa(int(s.NextID)))
+			// }
+			// fmt.Println()
+			// printPeerInfo()
 			recv_channels[relaySender] <- msg.Status
 
 		} else if msg.Private != nil {
@@ -279,11 +282,11 @@ func handleGossiper(gossiper *Gossiper, fileData map[string]*mFile) {
 			handleBlock(gossiper.conn, msg.BlockPublish, peer_list, relaySender)
 		} else if msg.WeightPacket != nil {
 			// fmt.Println("GET THE WEIGHT PACKET!")
-			handleWeight(gossiper.conn, msg.WeightPacket)
+			go handleWeight(gossiper.conn, msg.WeightPacket)
 			// sendToPeers(gossiper.conn, "", packetBytes)
 		} else if msg.GradientPacket != nil {
 
-			handleGradient(gossiper.conn, msg.GradientPacket)
+			go handleGradient(gossiper.conn, msg.GradientPacket)
 		} else {
 			fmt.Println("all-nil message")
 		}
@@ -426,11 +429,6 @@ func sendPacketToAddr(conn *net.UDPConn, gossipPacket GossipPacket, dst_addr str
 		fmt.Println("ERROR!!!!!!! ")
 		fmt.Println(err1)
 	}
-	// if gossipPacket.WeightPacket != nil {
-		// fmt.Println("==== SEND WEIGHTPACKET TO", dst_addr, "====")
-		// fmt.Println(gossipPacket.WeightPacket.Weight)
-		// fmt.Println(packetBytes)
-	// }
 
 	if err != nil {
 		log.Fatal(err)

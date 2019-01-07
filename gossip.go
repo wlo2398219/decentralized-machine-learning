@@ -5,35 +5,44 @@ import (
 	"math/rand"
 	"net"
 	"time"
+	"github.com/dedis/protobuf"
+	
 )
 
 // func rumorMongering(conn *net.UDPConn, sender, mongerIP string, ch chan bool, msgBytes []byte) {
 func rumorMongering(conn *net.UDPConn, sender, mongerIP string, ch chan *StatusPacket, msgBytes []byte) {
 
-	fmt.Println("MONGERING with", mongerIP)
-	dst, _ := net.ResolveUDPAddr("udp4", mongerIP)
+	// fmt.Println("MONGERING with", mongerIP)
+	var msg = GossipPacket{}
 
-	_, err := conn.WriteToUDP(msgBytes, dst)
+	protobuf.Decode(msgBytes, &msg)
+	err := sendPacketToAddr(conn, msg, mongerIP)
+
+	// dst, _ := net.ResolveUDPAddr("udp4", mongerIP)
+	// _, err := conn.WriteToUDP(msgBytes, dst)
 
 	if err != nil {
-		fmt.Println("ERROR in Mongering!!!", err)
+		fmt.Println("ERROR in Mongering~~~", err, len(msgBytes))
 	}
 
 	if sender != "" {
 		// send back status packet to the one who sends rumor to you
-		err = sendPacketToAddr(conn, GossipPacket{Status: &status}, sender)
 
+		err = sendPacketToAddr(conn, GossipPacket{Status: &status}, sender)
 		if err != nil {
 			fmt.Println("ERROR in Mongering!!!", err)
+		} else {
+			// fmt.Println("NO ERROR in Mongering!!!")
 		}
 	}
+
 	var timer = time.NewTimer(time.Second)
 
 	select {
 	case <-timer.C:
 		if continueSending() && peer_list.Len() != 1 {
 			nextOne := randomPeer(mongerIP)
-			fmt.Println("FLIPPED COIN sending rumor to", nextOne)
+			// fmt.Println("FLIPPED COIN sending rumor to", nextOne)
 			go rumorMongering(conn, mongerIP, nextOne, recv_channels[nextOne], msgBytes)
 		} else {
 		}
@@ -101,10 +110,10 @@ func compareStatusAndSend(conn *net.UDPConn, recv_status *StatusPacket, dst_addr
 		}
 	}
 
-	fmt.Println("IN SYNC WITH " + dst_addr)
+	// fmt.Println("IN SYNC WITH " + dst_addr)
 	if msgBytes != nil && continueSending() && peer_list.Len() != 1 {
 		nextOne := randomPeer(dst_addr)
-		fmt.Println("FLIPPED COIN sending rumor to", nextOne)
+		// fmt.Println("FLIPPED COIN sending rumor to", nextOne)
 		go rumorMongering(conn, dst_addr, nextOne, recv_channels[nextOne], msgBytes)
 	}
 
