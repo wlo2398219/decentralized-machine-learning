@@ -144,3 +144,42 @@ func mnist_dataset(N int) (*Matrix, []int) {
 	return matX, y
 
 }
+
+
+func mnist_dataset_test(N int) (*Matrix, []int) {
+	var (
+		nf    = 500
+		x        = make([][]float64, N)
+		y        = make([]int, N)
+		data     = make([]float64, nf)
+		filename = "./_Datasets/hidden_layer_test.csv"
+	)
+
+	b, err := ioutil.ReadFile(filename)
+
+	if err != nil {
+		log.Fatal("Failed to open " + filename)
+	}
+
+	lines := strings.Split(string(b), "\n")
+
+	for ind, line := range lines[:N] {
+
+		tmp := strings.Split(line, ",")
+		tmp1, _ := strconv.ParseFloat(tmp[0], 64)
+		y[ind] = int(tmp1)
+
+		for i := 1; i < nf+1; i++ {
+			data[i-1], _ = strconv.ParseFloat(tmp[i], 64)
+		}
+
+		x[ind] = make([]float64, nf)
+		copy(x[ind], data)
+
+	}
+	
+	matX := &Matrix{row: N, col: 500, mat: x}
+
+	return matX, y
+
+}
