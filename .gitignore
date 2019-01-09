@@ -1,1 +1,5 @@
 *.csv
+feature-env
+./finalproject
+./client/client
+*.out

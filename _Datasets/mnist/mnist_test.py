@@ -13,6 +13,7 @@ def save_hidden_layer_value(model, data_loader, device, filename):
     test_loss = 0
     correct = 0
     values = []
+    digits_values = [[] for _ in range(10)]
     with torch.no_grad():
         for data, target in data_loader:
             data, target = data.to(device), target.to(device)
@@ -20,15 +21,21 @@ def save_hidden_layer_value(model, data_loader, device, filename):
 
             print(hidden.size(), data.size(), target.size())
             for i in range(target.size()[0]):
-                values.append(','.join([str(int(target[i]))] +\
+                values.append(','.join([str(int(target[i]))] +
+                    [str(float(v)) for v in hidden[i, :]]))
+                digits_values[int(target[i])].append(','.join([str(int(target[i]))] +
                     [str(float(v)) for v in hidden[i, :]]))
 
             test_loss += F.nll_loss(output, target, reduction='sum').item()  # sum up batch loss
             pred = output.max(1, keepdim=True)[1]  # get the index of the max log-probability
             correct += pred.eq(target.view_as(pred)).sum().item()
 
-    with open(filename, 'w') as f:
-        f.write('\n'.join(values))
+    # with open(filename + '.csv', 'w') as f:
+    #     f.write('\n'.join(values))
+
+    for i in range(10):
+        with open(filename + '_' + str(i) + '.csv', 'w') as f:
+            f.write('\n'.join(digits_values[i]))
 
     test_loss /= len(data_loader.dataset)
 
@@ -84,8 +91,8 @@ def main():
     model = Net().to(device)
     model.load_state_dict(torch.load("mnist_cnn.pt"))
 
-    save_hidden_layer_value(model, train_loader, device, "hidden_layer_train.csv")
-    save_hidden_layer_value(model, test_loader, device, "hidden_layer_test.csv")
+    save_hidden_layer_value(model, train_loader, device, "hidden_layer_train")
+    save_hidden_layer_value(model, test_loader, device, "hidden_layer_test")
 
 
 if __name__ == '__main__':
