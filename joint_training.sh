@@ -15,7 +15,7 @@ sleep 5
 # ./client/client -UIPort=10000 -train -file="uci_cbm_dataset.txt"
 
 
-# sleep 20
+sleep 20
 
-# pkill -f finalproject
+pkill -f finalproject
 

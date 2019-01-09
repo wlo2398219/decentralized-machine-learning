@@ -389,9 +389,11 @@ func handleClient(ch chan *GossipPacket, gossiper *Gossiper, fileData map[string
 				}
 			case "TRAIN":
 				fmt.Println("---- TRAINING REQUEST ----", msg.Simple.Contents)
-				newTraining(gossiper.conn, msg.Simple.Contents)  //  dataset
-				// newTraining(gossiper.conn, "uci_cbm_dataset.txt")  //  dataset
-				
+				newTraining(gossiper.conn, msg.Simple.Contents)  // dataset
+				// newTraining(gossiper.conn, "uci_cbm_dataset.txt")  // dataset
+			case "TEST":
+				fmt.Println("---- TESTING REQUEST ----", msg.Simple.Contents)
+				newTesting(gossiper.conn, msg.Simple.Contents)  // test data
 			}
 		} else if msg.Private != nil { // PRIVATE MESSAGE
 

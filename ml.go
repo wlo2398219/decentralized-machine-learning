@@ -16,6 +16,7 @@ var (
 	nameIDTable     = map[string]bool{}                // used to record if I receive the weight from this peer in the given round
 	dataset string
 	feature FeatureType
+	globalWeight WeightType
 	// mnistFeature, mnistWeight = mnist_dataset()
 	fcLayer = newLinearLayer(500, 10)
 	smLayer = SoftmaxLayer{}  
@@ -191,8 +192,8 @@ func newTraining(conn *net.UDPConn, dataName string) {
 	// fmt.Println("MY INIT WEIGHTS")
 	// fmt.Println(weight.Val)
 
-	go byzantineSGD(conn, dataName)
-	// go distributedSGD(conn, dataName)
+	// go byzantineSGD(conn, dataName)
+	go distributedSGD(conn, dataName)
 }
 
 func distributedSGD(conn *net.UDPConn, dataName string) {
@@ -220,7 +221,7 @@ func distributedSGD(conn *net.UDPConn, dataName string) {
 		// matX.print()
 	}
 
-	k, d := 1, len(weight.Val) // k is #weights to be got, d is the dimension of weight
+	k, d := 3, len(weight.Val) // k is #weights to be got, d is the dimension of weight
 	// k := 1 // k is #weights to be got, d is the dimension of weight
 	
 	if dataName != "mnist" {
@@ -236,7 +237,7 @@ func distributedSGD(conn *net.UDPConn, dataName string) {
 	fmt.Println("INIT LOSS in mnist:", loss_train) //, ", TEST LOSS:", loss_test)
 
 	fmt.Println("DATASET:   ", dataName)
-	for round := 0; round < 100; round++ {
+	for round := 0; round < 30; round++ {
 
 		broadcastWeight(conn, &WeightPacket{Org: *name, IterID: round, Dataset:dataName, Weight: &weight})
 		
@@ -295,6 +296,7 @@ func distributedSGD(conn *net.UDPConn, dataName string) {
 		for i := range updates {
 			weight.Val[i] = weight.Val[i] - gamma*updates[i]/float64(k)
 		}
+		globalWeight = weight
 
 		// fmt.Println("CURRENT WEIGHTS:", weight.Val)
 
@@ -506,6 +508,7 @@ func byzantineSGD(conn *net.UDPConn, dataName string) {
 			weight.Val[i] = weight.Val[i] - gamma*updates[i]
 		}
 		weightHistory = append(weightHistory, weight)
+		globalWeight = weight
 
 		// fmt.Println("CURRENT WEIGHTS:", weight.Val)
 
@@ -546,6 +549,39 @@ func byzantineSGD(conn *net.UDPConn, dataName string) {
 		// // loss_test  := f(feature_test,  weight, "mse", "", 0)
 		// fmt.Println("LOSS:", loss_train) //, ", TEST LOSS:", loss_test)
 	}
+}
+
+
+func newTesting(conn *net.UDPConn, dataFilename string) {
+	go func(){
+		// Call python feature extractor.
+		var dataFeature FeatureType
+		weight := globalWeight
+		dataFeature = extractFeature(dataFilename)
+
+		// Pass the feature to model and get the output.
+		if dataset != "mnist" {
+			// TODO: Implement this if needed.
+		} else {
+			fcLayer.W, fcLayer.B = deFlatten(weight.Val)
+			testMatX := sliceToMat(dataFeature.Val[0]).T()
+			nnOutput := fcLayer.forward(testMatX)
+
+			max_ := nnOutput.mat[0][0]
+			pred := 0
+			for j := 1 ; j < 10 ; j++ {
+				if max_ < nnOutput.mat[0][j] {
+					max_ = nnOutput.mat[0][j]
+					pred = j
+				}
+			}
+
+			fmt.Println("PRED: data =", dataFilename, "pred =", pred,
+				"label =", dataFeature.Output[0])
+		}
+
+		// TODO (or not?): Display (print?) output.
+	}()
 }
 
 // f: loss function
@@ -795,13 +831,13 @@ func deFlatten(weights []float64) (*Matrix, *Matrix) {
 
 	for i := 0 ; i < wx.row ; i++ {
 		for j := 0 ; j < wx.col ; j++ {
-			wx.mat[i][j] = weights[ind] 
+			wx.mat[i][j] = weights[ind]
 			ind++
 		}
 	}
 
 	for i := 0 ; i < bx.row ; i++ {
-		bx.mat[i][0] = weights[ind] 
+		bx.mat[i][0] = weights[ind]
 		ind++
 	}
 

@@ -19,6 +19,7 @@ var (
 	REQUEST  = flag.String("request", "", "request a chuck or metafile of this hash")
 	KEYWORDS = flag.String("keywords", "", "key1,key2,key3...")
 	TRAIN    = flag.Bool("train", false, "training signal")
+	TEST     = flag.Bool("test", false, "testing signal")
 )
 
 // A Peerster ​simple message
@@ -128,6 +129,9 @@ func main() {
 
 	if *TRAIN && *FILE != "" {
 		simpleMessage := &SimpleMessage{Contents: *FILE, OriginalName: "TRAIN"}
+		packetToSend = GossipPacket{Simple: simpleMessage}
+	} else if *TEST && *FILE != "" {
+		simpleMessage := &SimpleMessage{Contents: *FILE, OriginalName: "TEST"}
 		packetToSend = GossipPacket{Simple: simpleMessage}
 	} else if *DEST == "" && *MSG != "" { // simple message
 		simpleMessage := &SimpleMessage{Contents: *MSG, OriginalName: "RUMOR"}

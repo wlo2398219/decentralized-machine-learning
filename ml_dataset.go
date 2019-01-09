@@ -4,8 +4,9 @@ import (
 	"log"
 	"strconv"
 	"strings"
-	// "fmt"
+	"fmt"
 	"io/ioutil"
+	"os/exec"
 )
 
 func load_data(filename string) (FeatureType, WeightType) {
@@ -177,9 +178,34 @@ func mnist_dataset_test(N int) (*Matrix, []int) {
 		copy(x[ind], data)
 
 	}
-	
+
 	matX := &Matrix{row: N, col: 500, mat: x}
 
 	return matX, y
 
+}
+
+
+func extractFeature(dataFilename string) FeatureType {
+	// NOTE: Assume dataset is set.
+	var dataFeature FeatureType
+	if dataset != "mnist" {
+	} else {
+		cmd := exec.Command("bash", "mnist_feature_extractor.sh", dataFilename)
+		// fmt.Println(cmd.Args)
+		out, err := cmd.CombinedOutput()
+		if err != nil { fmt.Println(err) }
+		// fmt.Println(string(out))
+
+		// Parse feature from output.
+		dataFeature.Val = append(dataFeature.Val, make([]float64, 500))
+		for i, s := range strings.Split(string(out), ",") {
+			val, err := strconv.ParseFloat(s, 64)
+			if err != nil { fmt.Println(err) }
+			dataFeature.Val[0][i] = val
+		}
+		dataFeature.Output = []float64{-1.0}
+		// fmt.Println(dataFeature)
+	}
+	return dataFeature
 }

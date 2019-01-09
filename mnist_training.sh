@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+mnistDir="../finalproject/_Datasets/mnist"
+
 cd ../finalproject
 go build 
 cd client 
@@ -7,6 +9,11 @@ go build
 cd ../../demo
 cp ../finalproject/finalproject .
 cp ../finalproject/client/client .
+
+# Initialize feature extractor.
+# Add ../ before $mnistDir because the generated file will be moved to ./$name
+echo "Initialize feature extractor."
+bash $mnistDir/mnist_feature_init.sh "../$mnistDir"
 
 name='A'
 
@@ -16,6 +23,7 @@ do
 	mkdir -p "$name/_Datasets"
 	cp finalproject "$name"
 	cp client "$name"
+	cp mnist_feature_extractor.sh "$name"
 
 	# if [[ $i > 1 ]]; then
 		#statements
@@ -54,7 +62,8 @@ sleep 10
 # ./A/client -UIPort=10000 -train -file="mnist"
 ./A/client -UIPort=10000 -train -file="mnist"
 
+read -p "Press [Enter] key to test.."
+./A/client -UIPort=10000 -test -file="images/0.png"
 
-
-
-# pkill -f finalproject
+read -p "Press [Enter] key to stop.."
+pkill -f finalproject
