@@ -192,8 +192,8 @@ func newTraining(conn *net.UDPConn, dataName string) {
 	// fmt.Println("MY INIT WEIGHTS")
 	// fmt.Println(weight.Val)
 
-	// go byzantineSGD(conn, dataName)
-	go distributedSGD(conn, dataName)
+	go byzantineSGD(conn, dataName)
+	// go distributedSGD(conn, dataName)
 }
 
 func distributedSGD(conn *net.UDPConn, dataName string) {
