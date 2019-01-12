@@ -578,8 +578,10 @@ func newTesting(conn *net.UDPConn, dataFilename string) {
 				}
 			}
 
-			fmt.Println("PRED: data =", dataFilename, "pred =", pred,
-				"label =", dataFeature.Output[0])
+			fmt.Println("PRED:", dataFilename, "is", pred)
+
+			// fmt.Println("PRED: data =", dataFilename, "pred =", pred,
+				// "label =", dataFeature.Output[0])
 		}
 
 		// TODO (or not?): Display (print?) output.
