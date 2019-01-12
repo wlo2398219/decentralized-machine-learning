@@ -1,9 +1,25 @@
--- CURRENT PROGRESS --
+## Prererequisites
+- Install python3
+- Install virtualenv
+- Download hidden_layer_train_split.zip and  hidden_layer_test.csv 
 
-- every node shares the same dataset now (load uci_cbm_dataset.txt in 15th line of ml.go) and uses it for training. There're some bugs inside. You can try to run joint_training.sh to see the update of weights in A.out, but the loss isn't converge.
+## Directory & File Structure
+```
+finalproject
++-- rand1.py
++-- main.go and other go files
++-- mnist_training.sh
++-- client
+|   +-- main.go
 
-- 
-
--- NOTE --
-- I found that every beginning letter should be captial case; otherwise it cannot be serialized by protobuf
-
+demo
++-- hidden_layer_test.csv
++-- mnist_training.sh
++-- hidden_layer_train_split
+|   +-- hidden_layer_train_split_0.csv ~ hidden_layer_train_split_9.csv
+```
+## Place files
+Before the training, we need to create a new directory demo/ like above and put the following directory & files
+1. hidden_layer_train_split/ (to be dowloaded)
+2. hidden_layer_test.csv (to be dowloaded)
+3. mnist_training.sh (from finalproject)
