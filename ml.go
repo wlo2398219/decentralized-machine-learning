@@ -117,9 +117,17 @@ func handleWeight(conn *net.UDPConn, packet *WeightPacket) {
 			grad = grad_f_nn(*packet.Weight, globalX, globalY)
 		}
 
-		time.Sleep(time.Duration(rand.Intn(5000)) * time.Millisecond)		
-		sendGradient(conn, &GradientPacket{Org: *name, Dst: packet.Org, IterID: packet.IterID, Gradient: grad}, packet.Org)
-
+		if *byz {
+			// Return wrong gradient really fast.
+			for i := range grad.Val {
+				// grad.Val[i] = rand.NormFloat64()
+				grad.Val[i] = -3 * grad.Val[i]
+			}
+			sendGradient(conn, &GradientPacket{Org: *name, Dst: packet.Org, IterID: packet.IterID, Gradient: grad}, packet.Org)
+		} else {
+			time.Sleep(time.Duration(rand.Intn(5000)) * time.Millisecond)
+			sendGradient(conn, &GradientPacket{Org: *name, Dst: packet.Org, IterID: packet.IterID, Gradient: grad}, packet.Org)
+		}
 	}
 
 }

@@ -10,8 +10,13 @@ head = "127.0.0.1:"
 
 p = 0.2
 commands = []
-template = "./finalproject -UIPort=%d -gossipAddr=%s -name=%s -peers=%s -rtimer=5 -mode=%s > %s &"
+template = "./finalproject -UIPort=%d -gossipAddr=%s -name=%s -peers=%s -rtimer=5 -mode=%s -byz=%s > %s &"
 random.seed(sys.argv[1])
+
+byz = ''
+if len(sys.argv) > 3:
+    byz = sys.argv[3]
+
 
 name_addr = {}
 edge_list = []
@@ -39,17 +44,24 @@ for input_name in string.ascii_uppercase[:10]:
     gossipAddr = head + str(gossipPort)
     outputFile = input_name + ".out"
     
-    commands.append(template%(UIPort, gossipAddr, input_name, peers, sys.argv[2], outputFile))    
+    if input_name == byz:
+        is_byz = True
+    else:
+        is_byz = False
+    commands.append(template%(UIPort, gossipAddr, input_name, peers, sys.argv[2], is_byz, outputFile))    
+    # print(commands[-1])
 
-G = nx.Graph()
+draw = False
+if draw:
+    G = nx.Graph()
 
-for n in string.ascii_uppercase[:10]:
-    G.add_node(n)
+    for n in string.ascii_uppercase[:10]:
+        G.add_node(n)
 
-G.add_edges_from(edge_list)
+    G.add_edges_from(edge_list)
 
-nx.draw_circular(G, with_labels=True,  alpha = 0.7)
-plt.savefig('topo.png', format='PNG')    
+    nx.draw_circular(G, with_labels=True,  alpha = 0.7)
+    plt.savefig('topo.png', format='PNG')    
 
 for command, n in zip(commands, string.ascii_uppercase[:10]):
     os.chdir(n)

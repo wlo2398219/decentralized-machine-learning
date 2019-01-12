@@ -26,7 +26,6 @@ do
 	cp finalproject "$name"
 	cp client "$name"
 	cp mnist_feature_extractor.sh "$name"
-	cp rand.py "$name"
 
 	if [[ $i == 1 ]]; then
 		#statements
@@ -46,7 +45,7 @@ name='A'
 nNode=10
 
 
-python3 rand1.py 'B' "$mode"
+python3 rand1.py 'B' "$mode" "B"
 # for i in `seq 1 $nNode`;
 # do
 # 	cd $name
