@@ -9,13 +9,15 @@ go build
 cd ../../demo
 cp ../finalproject/finalproject .
 cp ../finalproject/client/client .
+cp ../finalproject/rand1.py .
 
 # Initialize feature extractor.
 # Add ../ before $mnistDir because the generated file will be moved to ./$name
 echo "Initialize feature extractor."
 bash $mnistDir/mnist_feature_init.sh "../$mnistDir"
 
-name='A'
+name="A"
+mode="$1"
 
 for i in `seq 1 10`;
 do
@@ -44,7 +46,7 @@ name='A'
 nNode=10
 
 
-python3 rand1.py 'B'
+python3 rand1.py 'B' "$mode"
 # for i in `seq 1 $nNode`;
 # do
 # 	cd $name

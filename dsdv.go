@@ -23,12 +23,12 @@ func updateNextHop(orgSender, relaySender string, ID uint32) {
 	if !exist {
 		downloadProcessTable[orgSender] = make(chan *DataReply)
 		nextHopTable[orgSender] = &NextHopPair{NextHop: relaySender, SeqNum: ID}
-		fmt.Println("DSDV", orgSender, relaySender)
+		// fmt.Println("DSDV", orgSender, relaySender)
 	} else if nextHopTable[orgSender].SeqNum < ID && nextHopTable[orgSender].NextHop != relaySender {
 		// fmt.Println("DSDV - ", nextHopTable[orgSender].NextHop, ",", nextHopTable[orgSender].SeqNum, ",", relaySender, ",", ID)
 		nextHopTable[orgSender].NextHop = relaySender
 		nextHopTable[orgSender].SeqNum = ID
-		fmt.Println("DSDV", orgSender, relaySender)
+		// fmt.Println("DSDV", orgSender, relaySender)
 	}
 }
 

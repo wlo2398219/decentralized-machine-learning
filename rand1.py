@@ -10,7 +10,7 @@ head = "127.0.0.1:"
 
 p = 0.2
 commands = []
-template = "./finalproject -UIPort=%d -gossipAddr=%s -name=%s -peers=%s -rtimer=5 > %s &"
+template = "./finalproject -UIPort=%d -gossipAddr=%s -name=%s -peers=%s -rtimer=5 -mode=%s > %s &"
 random.seed(sys.argv[1])
 
 name_addr = {}
@@ -39,7 +39,7 @@ for input_name in string.ascii_uppercase[:10]:
     gossipAddr = head + str(gossipPort)
     outputFile = input_name + ".out"
     
-    commands.append(template%(UIPort, gossipAddr, input_name, peers, outputFile))    
+    commands.append(template%(UIPort, gossipAddr, input_name, peers, sys.argv[2], outputFile))    
 
 G = nx.Graph()
 

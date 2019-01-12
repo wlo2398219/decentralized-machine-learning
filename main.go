@@ -23,6 +23,7 @@ var (
 	gossipAddr = flag.String("gossipAddr", "127.0.0.1:5000", "ip:port for the gossiper (default \"127.0.0.1:5000\")")
 	name       = flag.String("name", "281544", "name of the gossiper")
 	peers      = flag.String("peers", "", "comma seperated list of peers of the form ip:port")
+	mode      = flag.String("mode", "distributed", "comma seperated list of peers of the form ip:port")
 	simple     = flag.Bool("simple", false, "run gossiper in simple broadcast mode")
 	gui        = flag.Bool("gui", false, "run gossiper in gui mode")
 

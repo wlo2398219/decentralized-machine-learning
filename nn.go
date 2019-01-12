@@ -4,7 +4,7 @@ import (
 	// "log"
 	"math"
 	"math/rand"
-	"fmt"
+	// "fmt"
 )
 
 type NNLayer interface {
@@ -95,7 +95,7 @@ func (l *FCLayer) forward(x *Matrix) *Matrix {
 	l.X = x
 	l.Y = result
 
-	fmt.Println("forward finished")
+	// fmt.Println("forward finished")
 	return result
 }
 
