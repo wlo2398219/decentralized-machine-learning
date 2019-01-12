@@ -72,7 +72,16 @@ sleep 10
 ./A/client -UIPort=10000 -train -file="mnist"
 
 read -p "Press [Enter] key to test.."
-./A/client -UIPort=10000 -test -file="images/0.png"
+for i in `seq 1 10`;
+do
+	read num
+	if [[ $num == "-1" ]]; then
+		#statements
+		break
+	fi
+	./A/client -UIPort=10000 -test -file="images/$num.png"
+	# ./A/client -UIPort=10000 -test -file="images/0.png"
+done
 
 read -p "Press [Enter] key to stop.."
 pkill -f finalproject
