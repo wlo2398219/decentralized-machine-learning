@@ -285,7 +285,7 @@ func handleGossiper(gossiper *Gossiper, fileData map[string]*mFile) {
 			handleBlock(gossiper.conn, msg.BlockPublish, peer_list, relaySender)
 		} else if msg.WeightPacket != nil {
 			// fmt.Println("GET THE WEIGHT PACKET!")
-			go handleWeight(gossiper.conn, msg.WeightPacket)
+			handleWeight(gossiper.conn, msg.WeightPacket)
 			// sendToPeers(gossiper.conn, "", packetBytes)
 		} else if msg.GradientPacket != nil {
 
