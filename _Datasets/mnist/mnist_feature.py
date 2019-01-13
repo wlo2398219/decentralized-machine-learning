@@ -42,6 +42,10 @@ def extract(file):
 
     with torch.no_grad():
         img = Image.open(dir_path + '/' + file)
+    
+        if file == "images/download.png":
+            img = img.convert("L").resize((28,28), Image.ANTIALIAS)    # best down-sizing filter
+
         tensor = tf(img).unsqueeze(0).to(device)
         output, hidden = model(tensor)
         feature = hidden.numpy()

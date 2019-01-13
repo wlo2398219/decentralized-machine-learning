@@ -10,6 +10,7 @@ head = "127.0.0.1:"
 
 p = 0.2
 commands = []
+template_gui = "./finalproject -UIPort=%d -gossipAddr=%s -name=%s -peers=%s -rtimer=5 -mode=%s -gui -byz=%s > %s &"
 template = "./finalproject -UIPort=%d -gossipAddr=%s -name=%s -peers=%s -rtimer=5 -mode=%s -byz=%s > %s &"
 random.seed(sys.argv[1])
 
@@ -48,7 +49,11 @@ for input_name in string.ascii_uppercase[:10]:
         is_byz = True
     else:
         is_byz = False
-    commands.append(template%(UIPort, gossipAddr, input_name, peers, sys.argv[2], is_byz, outputFile))    
+
+    if input_name == "A":
+        commands.append(template_gui%(UIPort, gossipAddr, input_name, peers, sys.argv[2], is_byz, outputFile))    
+    else:
+        commands.append(template%(UIPort, gossipAddr, input_name, peers, sys.argv[2], is_byz, outputFile))    
     # print(commands[-1])
 
 draw = False

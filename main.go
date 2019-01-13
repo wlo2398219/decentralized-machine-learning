@@ -115,9 +115,10 @@ func main() {
 		r.HandleFunc("/node/", nodeHandler)
 		r.HandleFunc("/id/", idHandler)
 		r.HandleFunc("/file/", fileHandler(chClientPacket))
+		r.HandleFunc("/ml/", mlHandler)
 		r.HandleFunc("/p2pDownload/", p2pDownloadHandler(chClientPacket, *name, gossiper_peer.conn, peer_list))
 
-		http.ListenAndServe(":8080", handlers.CompressHandler(r))
+		http.ListenAndServe(":10000", handlers.CompressHandler(r))
 
 	}
 
@@ -391,11 +392,12 @@ func handleClient(ch chan *GossipPacket, gossiper *Gossiper, fileData map[string
 				}
 			case "TRAIN":
 				fmt.Println("---- TRAINING REQUEST ----", msg.Simple.Contents)
-				newTraining(gossiper.conn, msg.Simple.Contents)  // dataset
+				newTraining(gossiper.conn, msg.Simple.Contents, ch)  // dataset
 				// newTraining(gossiper.conn, "uci_cbm_dataset.txt")  // dataset
 			case "TEST":
 				fmt.Println("---- TESTING REQUEST ----", msg.Simple.Contents)
-				newTesting(gossiper.conn, msg.Simple.Contents)  // test data
+				// newTesting(gossiper.conn, msg.Simple.Contents)  // test data
+				newTesting(msg.Simple.Contents)  // test data
 			}
 		} else if msg.Private != nil { // PRIVATE MESSAGE
 

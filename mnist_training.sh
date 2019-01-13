@@ -30,6 +30,8 @@ do
 	if [[ $i == 1 ]]; then
 		#statements
 		cp "hidden_layer_test.csv" "./A/_Datasets/"
+		cp "../finalproject/index.html" "./A/"
+
 	fi
 	cp "hidden_layer_train_split/hidden_layer_train_$((i-1)).csv" "$name/_Datasets/hidden_layer_train.csv"
 

@@ -6,9 +6,64 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"log"
+	"os"
+	"image"
+	"image/color"
+	"image/png"
+	"strconv"
 )
 
 var id_list []string
+
+
+func mlHandler(w http.ResponseWriter, req *http.Request) {
+
+	switch req.Method {
+	case "POST":
+		vals := strings.Split(req.FormValue("data"), ",")
+		fmt.Println(len(vals))
+		
+		img := image.NewNRGBA(image.Rect(0, 0, 196, 196))
+
+		for y := 0; y < 196; y++ {
+			for x := 0; x < 196; x++ {
+				r, _ := strconv.ParseUint(vals[y*4*196+x*4], 10, 8)
+				g, _ := strconv.ParseUint(vals[y*4*196+x*4+1], 10, 8)
+				b, _ := strconv.ParseUint(vals[y*4*196+x*4+2], 10, 8)
+
+				fmt.Println(r,g,b)
+				img.Set(x, y, color.NRGBA{
+					R: uint8(r),
+					G: uint8(g),
+					B: uint8(b),
+					A: 255,
+				})
+			}
+		}
+
+		f, err := os.Create("../../finalproject/_Datasets/mnist/images/download.png")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if err := png.Encode(f, img); err != nil {
+			f.Close()
+			log.Fatal(err)
+		}
+
+		if err := f.Close(); err != nil {
+			log.Fatal(err)
+		}
+
+		fmt.Println("FINISHHHHHHHH")
+		result := newTesting("images/download.png")
+		fmt.Fprintf(w, result)
+
+	default:
+		fmt.Println("UNKNOWN REQUEST FROM nodeHandler")
+	}
+}
 
 func messageHandler(ch chan *GossipPacket) func(w http.ResponseWriter, req *http.Request) {
 
@@ -112,6 +167,7 @@ func nodeHandler(w http.ResponseWriter, req *http.Request) {
 		fmt.Println("UNKNOWN REQUEST FROM nodeHandler")
 	}
 }
+
 
 func idHandler(w http.ResponseWriter, req *http.Request) {
 

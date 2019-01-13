@@ -24,7 +24,7 @@ var (
 	globalX *Matrix
 	globalY []int
 
-	SAMPLE = 3000
+	SAMPLE = 1000
 )
 
 // Input
@@ -184,7 +184,7 @@ func sendGradient(conn *net.UDPConn, packet *GradientPacket, Dst string) {
 
 // func newTrainig() chan<- *GradientPacket {
 
-func newTraining(conn *net.UDPConn, dataName string) {
+func newTraining(conn *net.UDPConn, dataName string, ch chan *GossipPacket) {
 	// load dataset
 	gradCh = make(chan *GradientPacket)
 
@@ -200,13 +200,13 @@ func newTraining(conn *net.UDPConn, dataName string) {
 	// fmt.Println("MY INIT WEIGHTS")
 	// fmt.Println(weight.Val)
 	if *mode == "distributed" {
-		go distributedSGD(conn, dataName)
+		go distributedSGD(conn, dataName, ch)
 	} else if *mode == "byzantine" {
-		go byzantineSGD(conn, dataName)
+		go byzantineSGD(conn, dataName, ch)
 	}
 }
 
-func distributedSGD(conn *net.UDPConn, dataName string) {
+func distributedSGD(conn *net.UDPConn, dataName string, ch chan *GossipPacket) {
 
 	// for iteration
 	// for select <- ch
@@ -338,15 +338,19 @@ func distributedSGD(conn *net.UDPConn, dataName string) {
 					count += 1
 				}
 			}
-
-			fmt.Println("Acc:", float64(count)*100/float64(SAMPLE))
+			acc := float64(count)*100/float64(SAMPLE)
+			fmt.Println("Acc:", acc)
+			text := "===== TESTING ACCURACY:" + strconv.FormatFloat(acc, 'f', 1, 64) + " ====="
+			// text := "ACCURACY:" + strconv.FormatFloat(acc, 'f', 1, 64)
+			simplemessage := &SimpleMessage{OriginalName: "RUMOR", RelayPeerAddr: "", Contents: text}
+			ch <- &GossipPacket{Simple: simplemessage}
 		}
 
 		// loss_test  := f(feature_test,  weight, "mse", "", 0)
 	}
 }
 
-func byzantineSGD(conn *net.UDPConn, dataName string) {
+func byzantineSGD(conn *net.UDPConn, dataName string, ch chan *GossipPacket) {
 
 	// var weight WeightType
 	var (
@@ -367,7 +371,6 @@ func byzantineSGD(conn *net.UDPConn, dataName string) {
 		fcLayer = newLinearLayer(500, 10)
 		weight = flattenWB(fcLayer.W, fcLayer.B)
 	}
-
 
 	// Parameter.
 	byzF := 1
@@ -551,7 +554,12 @@ func byzantineSGD(conn *net.UDPConn, dataName string) {
 				}
 			}
 
-			fmt.Println("Acc:", float64(count)*100/float64(SAMPLE))
+			acc := float64(count)*100/float64(SAMPLE)
+			fmt.Println("Acc:", acc)
+			text := "===== TESTING ACCURACY:" + strconv.FormatFloat(acc, 'f', 1, 64) + " ====="
+			simplemessage := &SimpleMessage{OriginalName: "RUMOR", RelayPeerAddr: "", Contents: text}
+			ch <- &GossipPacket{Simple: simplemessage}
+			// fmt.Println("Acc:", float64(count)*100/float64(SAMPLE))
 
 		}
 
@@ -561,39 +569,41 @@ func byzantineSGD(conn *net.UDPConn, dataName string) {
 	}
 }
 
-
-func newTesting(conn *net.UDPConn, dataFilename string) {
-	go func(){
+func newTesting(dataFilename string) string {
+// func newTesting(conn *net.UDPConn, dataFilename string) {
+	// go func() {
 		// Call python feature extractor.
-		var dataFeature FeatureType
-		weight := globalWeight
-		dataFeature = extractFeature(dataFilename)
+	var dataFeature FeatureType
+	weight := globalWeight
+	dataFeature = extractFeature(dataFilename)
+	// fmt.Println("dataFilename:", dataFilename)
+	pred := 0
 
-		// Pass the feature to model and get the output.
-		if dataset != "mnist" {
-			// TODO: Implement this if needed.
-		} else {
-			fcLayer.W, fcLayer.B = deFlatten(weight.Val)
-			testMatX := sliceToMat(dataFeature.Val[0]).T()
-			nnOutput := fcLayer.forward(testMatX)
+	// Pass the feature to model and get the output.
+	if dataset != "mnist" {
+		// TODO: Implement this if needed.
+	} else {
+		fcLayer.W, fcLayer.B = deFlatten(weight.Val)
+		testMatX := sliceToMat(dataFeature.Val[0]).T()
+		nnOutput := fcLayer.forward(testMatX)
 
-			max_ := nnOutput.mat[0][0]
-			pred := 0
-			for j := 1 ; j < 10 ; j++ {
-				if max_ < nnOutput.mat[0][j] {
-					max_ = nnOutput.mat[0][j]
-					pred = j
-				}
+		max_ := nnOutput.mat[0][0]
+		for j := 1 ; j < 10 ; j++ {
+			if max_ < nnOutput.mat[0][j] {
+				max_ = nnOutput.mat[0][j]
+				pred = j
 			}
-
-			fmt.Println("PRED:", dataFilename, "is", pred)
-
-			// fmt.Println("PRED: data =", dataFilename, "pred =", pred,
-				// "label =", dataFeature.Output[0])
 		}
 
+		fmt.Println("PRED:", dataFilename, "is", pred)
+		// fmt.Println("PRED: data =", dataFilename, "pred =", pred,
+			// "label =", dataFeature.Output[0])
+	}
+
+	return "The prediction is " + strconv.Itoa(pred)
+
 		// TODO (or not?): Display (print?) output.
-	}()
+	// }()
 }
 
 // f: loss function

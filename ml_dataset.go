@@ -194,16 +194,21 @@ func extractFeature(dataFilename string) FeatureType {
 		cmd := exec.Command("bash", "mnist_feature_extractor.sh", dataFilename)
 		// fmt.Println(cmd.Args)
 		out, err := cmd.CombinedOutput()
-		if err != nil { fmt.Println(err) }
+		if err != nil { fmt.Println("Here's an error", err) }
 		// fmt.Println(string(out))
 
 		// Parse feature from output.
 		dataFeature.Val = append(dataFeature.Val, make([]float64, 500))
+		
+		// fmt.Println(out)
+
 		for i, s := range strings.Split(string(out), ",") {
+			// fmt.Print(s, ",")
 			val, err := strconv.ParseFloat(s, 64)
-			if err != nil { fmt.Println(err) }
+			if err != nil { fmt.Println("ERROR:", err, ",", s) }
 			dataFeature.Val[0][i] = val
 		}
+		// fmt.Println()
 		dataFeature.Output = []float64{-1.0}
 		// fmt.Println(dataFeature)
 	}
