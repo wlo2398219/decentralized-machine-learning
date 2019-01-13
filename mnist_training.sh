@@ -45,7 +45,7 @@ name='A'
 nNode=10
 
 
-python3 rand1.py 'B' "$mode" "B"
+python3 rand1.py 'B' "$mode" ""
 # for i in `seq 1 $nNode`;
 # do
 # 	cd $name

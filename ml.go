@@ -24,7 +24,7 @@ var (
 	globalX *Matrix
 	globalY []int
 
-	SAMPLE = 3000
+	SAMPLE = 1000
 )
 
 // Input
@@ -79,7 +79,7 @@ func handleWeight(conn *net.UDPConn, packet *WeightPacket) {
 	// fmt.Println("ID:",packet.IterID)
 	// fmt.Println("WEIGHT:",packet.Weight)
 
-	// fmt.Println("HANDLE WEIGHT IN ROUND", packet.IterID)
+	fmt.Println("HANDLE WEIGHT IN ROUND", packet.IterID)
 
 	if packet.Org == *name {
 		return 
@@ -113,21 +113,13 @@ func handleWeight(conn *net.UDPConn, packet *WeightPacket) {
 		if packet.Dataset != "mnist" {
 			grad = grad_f(feature, *packet.Weight, "mse", "", 0)
 		} else {
-			// fmt.Println("==== grad_f_nn ====")
+			fmt.Println("==== grad_f_nn ====")
 			grad = grad_f_nn(*packet.Weight, globalX, globalY)
 		}
 
-		if *byz {
-			// Return wrong gradient really fast.
-			for i := range grad.Val {
-				// grad.Val[i] = rand.NormFloat64()
-				grad.Val[i] = -3 * grad.Val[i]
-			}
-			sendGradient(conn, &GradientPacket{Org: *name, Dst: packet.Org, IterID: packet.IterID, Gradient: grad}, packet.Org)
-		} else {
-			time.Sleep(time.Duration(rand.Intn(5000)) * time.Millisecond)
-			sendGradient(conn, &GradientPacket{Org: *name, Dst: packet.Org, IterID: packet.IterID, Gradient: grad}, packet.Org)
-		}
+		time.Sleep(time.Duration(rand.Intn(5000)) * time.Millisecond)		
+		sendGradient(conn, &GradientPacket{Org: *name, Dst: packet.Org, IterID: packet.IterID, Gradient: grad}, packet.Org)
+
 	}
 
 }
@@ -156,7 +148,7 @@ func broadcastWeight(conn *net.UDPConn, packet *WeightPacket) {
 	// fmt.Println("WEIGHT:",packet.Weight)
 	packet1 := GossipPacket{WeightPacket: packet}
 	for peer := range peer_list.Iter() {
-		// fmt.Println("==== BROADCAST WEIGHT TO", peer, " ====")
+		fmt.Println("==== BROADCAST WEIGHT TO", peer, " ====")
 		_ = sendPacketToAddr(conn, packet1, peer)
 	}
 
@@ -199,11 +191,9 @@ func newTraining(conn *net.UDPConn, dataName string) {
 
 	// fmt.Println("MY INIT WEIGHTS")
 	// fmt.Println(weight.Val)
-	if *mode == "distributed" {
-		go distributedSGD(conn, dataName)
-	} else if *mode == "byzantine" {
-		go byzantineSGD(conn, dataName)
-	}
+
+	// go byzantineSGD(conn, dataName)
+	go distributedSGD(conn, dataName)
 }
 
 func distributedSGD(conn *net.UDPConn, dataName string) {
@@ -271,7 +261,7 @@ func distributedSGD(conn *net.UDPConn, dataName string) {
 		if dataName != "mnist" {
 			grad = grad_f(feature, weight, "mse", "", 0)
 		} else {
-			// fmt.Println("==== grad_f_nn ====")
+			fmt.Println("==== grad_f_nn ====")
 			grad = grad_f_nn(weight, globalX, globalY)
 		}
 
@@ -282,7 +272,7 @@ func distributedSGD(conn *net.UDPConn, dataName string) {
 		}(round)
 
 		for i := 0; i < k; {
-			// fmt.Println("WAIT FOR GRAIDENT...")
+			fmt.Println("WAIT FOR GRAIDENT...")
 			select {
 
 			case ch := <-gradCh:
@@ -301,7 +291,7 @@ func distributedSGD(conn *net.UDPConn, dataName string) {
 			}
 		}
 
-		// fmt.Println("GET", k, "GRADIENT")
+		fmt.Println("ENOUGH GRADIENT")
 		// update the weight
 		for i := range updates {
 			weight.Val[i] = weight.Val[i] - gamma*updates[i]/float64(k)
@@ -586,10 +576,8 @@ func newTesting(conn *net.UDPConn, dataFilename string) {
 				}
 			}
 
-			fmt.Println("PRED:", dataFilename, "is", pred)
-
-			// fmt.Println("PRED: data =", dataFilename, "pred =", pred,
-				// "label =", dataFeature.Output[0])
+			fmt.Println("PRED: data =", dataFilename, "pred =", pred,
+				"label =", dataFeature.Output[0])
 		}
 
 		// TODO (or not?): Display (print?) output.
