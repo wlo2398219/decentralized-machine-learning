@@ -381,7 +381,7 @@ func byzantineSGD(conn *net.UDPConn, dataName string) {
 
 
 	// Parameter.
-	byzF := 1
+	byzF := 2
 
 	// Internal states for filters.
 	peersLC := make(map[string]float64)
@@ -497,7 +497,7 @@ func byzantineSGD(conn *net.UDPConn, dataName string) {
 	if dataName != "mnist" {
 		gamma = 0.0000000001      // gamma is learning step size
 	} else {
-		gamma = 5 * 1e-4     // gamma is learning step size
+		gamma = 5 * 1e-3     // gamma is learning step size
 	}
 
 
