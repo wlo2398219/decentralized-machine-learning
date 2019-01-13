@@ -500,7 +500,7 @@ func byzantineSGD(conn *net.UDPConn, dataName string, ch chan *GossipPacket) {
 	if dataName != "mnist" {
 		gamma = 0.0000000001      // gamma is learning step size
 	} else {
-		gamma = 5 * 1e-3     // gamma is learning step size
+		gamma = 5 * 1e-4    // gamma is learning step size
 	}
 
 
@@ -619,7 +619,7 @@ func newTesting(dataFilename string) string {
 	// go func() {
 		// Call python feature extractor.
 	var dataFeature FeatureType
-	weight := globalWeight
+	weight := newWeight(globalWeight)
 	dataFeature = extractFeature(dataFilename)
 	// fmt.Println("dataFilename:", dataFilename)
 	pred := 0
@@ -628,6 +628,7 @@ func newTesting(dataFilename string) string {
 	if dataset != "mnist" {
 		// TODO: Implement this if needed.
 	} else {
+		fcLayer := newLinearLayer(500, 10)
 		fcLayer.W, fcLayer.B = deFlatten(weight.Val)
 		testMatX := sliceToMat(dataFeature.Val[0]).T()
 		nnOutput := fcLayer.forward(testMatX)
