@@ -19,8 +19,8 @@ var (
 	globalWeight WeightType
 	// mnistFeature, mnistWeight = mnist_dataset()
 	// fcLayer = newLinearLayer(500, 10)
-	smLayer = SoftmaxLayer{}  
-	ceLayer = CrossEntropyLayer{}
+	// smLayer = SoftmaxLayer{}
+	// ceLayer = CrossEntropyLayer{}
 	globalX *Matrix
 	globalY []int
 
@@ -89,7 +89,7 @@ func handleWeight(conn *net.UDPConn, packet *WeightPacket) {
 	// fmt.Println("HANDLE WEIGHT IN ROUND", packet.IterID)
 
 	if packet.Org == *name {
-		return 
+		return
 	}
 
 	key := packet.Org + strconv.Itoa(packet.IterID)
@@ -182,7 +182,6 @@ func sendGradient(conn *net.UDPConn, packet *GradientPacket, Dst string) {
 	}
 
 	if _, exist := nextHopTable[Dst]; exist {
-		
 		_ = sendPacketToAddr(conn, gossipPacket, nextHopTable[Dst].NextHop)
 		fmt.Println("SEND GRADIENT TO", Dst, "FROM", packet.Org, "IN ROUND", packet.IterID)
 	} else {
@@ -226,7 +225,7 @@ func distributedSGD(conn *net.UDPConn, dataName string) {
 		testY []int
 		gamma float64
 		grad WeightType
-		fcLayer FCLayer
+		// fcLayer FCLayer
 	)
 
 	if dataName != "mnist" {
@@ -235,7 +234,7 @@ func distributedSGD(conn *net.UDPConn, dataName string) {
 	} else {
 		// matX, Y = mnist_dataset(SAMPLE)
 		testMatX, testY = mnist_dataset_test(SAMPLE)
-		fcLayer = newLinearLayer(500, 10)
+		fcLayer := newLinearLayer(500, 10)
 		weight = flattenWB(fcLayer.W, fcLayer.B)
 		globalWeight = newWeight(weight)
 		// fmt.Println(" =====  mnist ===== ")
@@ -244,24 +243,24 @@ func distributedSGD(conn *net.UDPConn, dataName string) {
 
 	k, d := 3, len(weight.Val) // k is #weights to be got, d is the dimension of weight
 	// k := 1 // k is #weights to be got, d is the dimension of weight
-	
+
 	if dataName != "mnist" {
 		gamma = 0.0000000001      // gamma is learning step size
 	} else {
 		gamma = 5 * 1e-3     // gamma is learning step size
 	}
 
-	fcLayer.W, fcLayer.B = deFlatten(weight.Val)
-	nnOutput := fcLayer.forward(testMatX)
-	smOutput := smLayer.forward(nnOutput)
-	loss_train := ceLayer.forward(smOutput, testY)
+	// fcLayer.W, fcLayer.B = deFlatten(weight.Val)
+	// nnOutput := fcLayer.forward(testMatX)
+	// smOutput := SoftmaxLayer{}.forward(nnOutput)
+	// loss_train := CrossEntropyLayer{}.forward(smOutput, testY)
+	loss_train := f_nn(weight, testMatX, testY)
 	fmt.Println("INIT LOSS in mnist:", loss_train) //, ", TEST LOSS:", loss_test)
 
 	fmt.Println("DATASET:   ", dataName)
 	for round := 0; round < 30; round++ {
 
 		broadcastWeight(conn, &WeightPacket{Org: *name, IterID: round, Dataset:dataName, Weight: &weight})
-		
 		fmt.Println("====== TRAINING EPOCH", round, "======")
 
 		// used to save sum(grad)
@@ -286,7 +285,7 @@ func distributedSGD(conn *net.UDPConn, dataName string) {
 				grad = grad_f_nn(w, globalX, globalY)
 			}
 
-			time.Sleep(time.Duration(rand.Intn(5000)) * time.Millisecond)		
+			time.Sleep(time.Duration(rand.Intn(5000)) * time.Millisecond)
 			packet := GradientPacket{Org:*name, Dst:*name, Dataset:dataName, IterID: r, Gradient: grad}
 			gradCh <- &packet
 		}(round, tmpWeight)
@@ -326,13 +325,14 @@ func distributedSGD(conn *net.UDPConn, dataName string) {
 
 		} else {
 			// fmt.Println("dimension:", matX.row, matX.col)
+			// smOutput := smLayer.forward(nnOutput)
+			// loss_train := ceLayer.forward(smOutput, testY)
+			loss := f_nn(weight, testMatX, testY)
+			fmt.Println("LOSS in mnist:", loss) //, ", TEST LOSS:", loss_test)
+
+			fcLayer := newLinearLayer(500, 10)
 			fcLayer.W, fcLayer.B = deFlatten(weight.Val)
-			// nnOutput := fcLayer.forward(matX)
 			nnOutput := fcLayer.forward(testMatX)
-			smOutput := smLayer.forward(nnOutput)
-			// loss_train := ceLayer.forward(smOutput, Y)
-			loss_train := ceLayer.forward(smOutput, testY)
-			fmt.Println("LOSS in mnist:", loss_train) //, ", TEST LOSS:", loss_test)
 
 			count := 0
 			for i := 0 ; i < SAMPLE ; i++ {
@@ -364,7 +364,7 @@ func byzantineSGD(conn *net.UDPConn, dataName string) {
 		testMatX *Matrix
 		testY []int
 		gamma float64
-		fcLayer FCLayer
+		// fcLayer FCLayer
 	)
 	// feature, weight = load_data(dataName)
 
@@ -374,7 +374,7 @@ func byzantineSGD(conn *net.UDPConn, dataName string) {
 	} else {
 		// matX, Y = mnist_dataset(SAMPLE)
 		testMatX, testY = mnist_dataset_test(SAMPLE)
-		fcLayer = newLinearLayer(500, 10)
+		fcLayer := newLinearLayer(500, 10)
 		weight = flattenWB(fcLayer.W, fcLayer.B)
 		globalWeight = newWeight(weight)
 	}
@@ -414,7 +414,8 @@ func byzantineSGD(conn *net.UDPConn, dataName string) {
 				sub(sliceToMat(lastPeerWeight.Val)).norm(2)
 			peerLC := peerGradientEvo / (peerModelEvo + 1e-9)
 			fmt.Println("new PeerLC: value =", peerLC, peerGradientEvo, peerModelEvo)
-			if grad.Org == *name {
+			if grad.Org == *name && false {
+				lastPeerWeight = newWeight(lastPeerWeight)
 				computedLastGrad := grad_f_nn(lastPeerWeight, globalX, globalY)
 				lastGradDiff := sliceToMat(computedLastGrad.Val).
 					sub(sliceToMat(lastPeerGradient.Val)).norm(2)
@@ -423,16 +424,16 @@ func byzantineSGD(conn *net.UDPConn, dataName string) {
 					sub(sliceToMat(grad.Gradient.Val)).norm(2)
 				fmt.Println("new gradient diff =", newGradDiff, "last gradient diff =", lastGradDiff)
 
-				computedLastGrad = grad_f_nn(lastPeerWeight, globalX, globalY)
-				lastGradDiff = sliceToMat(computedLastGrad.Val).
+				computedLastGrad2 := grad_f_nn(lastPeerWeight, globalX, globalY)
+				lastGradDiff = sliceToMat(computedLastGrad2.Val).
 					sub(sliceToMat(lastPeerGradient.Val)).norm(2)
 				computedGrad2 := grad_f_nn(weightHistory[grad.IterID], globalX, globalY)
 				newGradDiff = sliceToMat(computedGrad2.Val).
 					sub(sliceToMat(grad.Gradient.Val)).norm(2)
 				fmt.Println("new gradient diff =", newGradDiff, "last gradient diff =", lastGradDiff)
 
-				computedLastGrad = grad_f_nn(lastPeerWeight, globalX, globalY)
-				lastGradDiff = sliceToMat(computedLastGrad.Val).
+				computedLastGrad3 := grad_f_nn(lastPeerWeight, globalX, globalY)
+				lastGradDiff = sliceToMat(computedLastGrad3.Val).
 					sub(sliceToMat(lastPeerGradient.Val)).norm(2)
 				computedGrad3 := grad_f_nn(weightHistory[grad.IterID], globalX, globalY)
 				newGradDiff = sliceToMat(computedGrad3.Val).
@@ -444,6 +445,12 @@ func byzantineSGD(conn *net.UDPConn, dataName string) {
 				diff31 := sliceToMat(computedGrad3.Val).
 					sub(sliceToMat(computedGrad.Val)).norm(2)
 				fmt.Println("diff. comp. grad2 =", diff21, "diff. comp. grad3 =", diff31)
+
+				diff21 = sliceToMat(computedLastGrad2.Val).
+					sub(sliceToMat(computedLastGrad.Val)).norm(2)
+				diff31 = sliceToMat(computedLastGrad3.Val).
+					sub(sliceToMat(computedLastGrad.Val)).norm(2)
+				fmt.Println("diff. comp. last grad2 =", diff21, "diff. comp. last grad3 =", diff31)
 			}
 
 			peersLC[grad.Org] = peerLC
@@ -457,7 +464,7 @@ func byzantineSGD(conn *net.UDPConn, dataName string) {
 		modelEvo := sliceToMat(weight.Val).
 			sub(sliceToMat(lastWeight.Val)).norm(2)
 		newLC := gradientEvo / (modelEvo + 1e-9)
-		fmt.Println("newLC =", newLC)
+		fmt.Println("newLC =", newLC, gradientEvo, modelEvo)
 
 		cnt := 0
 		for peer, peerLC := range peersLC {
@@ -494,10 +501,11 @@ func byzantineSGD(conn *net.UDPConn, dataName string) {
 	}
 
 
-	fcLayer.W, fcLayer.B = deFlatten(weight.Val)
-	nnOutput := fcLayer.forward(testMatX)
-	smOutput := smLayer.forward(nnOutput)
-	loss_train := ceLayer.forward(smOutput, testY)
+	// fcLayer.W, fcLayer.B = deFlatten(weight.Val)
+	// nnOutput := fcLayer.forward(testMatX)
+	// smOutput := smLayer.forward(nnOutput)
+	// loss_train := ceLayer.forward(smOutput, testY)
+	loss_train := f_nn(weight, testMatX, testY)
 	fmt.Println("INIT LOSS in mnist:", loss_train) //, ", TEST LOSS:", loss_test)
 
 	for round := 0; round < 100; round++ {
@@ -522,7 +530,7 @@ func byzantineSGD(conn *net.UDPConn, dataName string) {
 			packet := GradientPacket{Org:*name, Dst:*name, Dataset:dataName, IterID: r, Gradient: grad}
 			time.Sleep(time.Duration(rand.Intn(5000)) * time.Millisecond)
 			gradCh <- &packet
-		}(round, tmpWeight)
+		}(round, newWeight(weight))
 
 		count := 0
 		for count < m {
@@ -566,14 +574,14 @@ func byzantineSGD(conn *net.UDPConn, dataName string) {
 			fmt.Println("LOSS:", loss_train) //, ", TEST LOSS:", loss_test)
 		} else {
 			// fmt.Println("dimension:", matX.row, matX.col)
-			fcLayer.W, fcLayer.B = deFlatten(weight.Val)
-			// nnOutput := fcLayer.forward(matX)
-			nnOutput := fcLayer.forward(testMatX)
-			smOutput := smLayer.forward(nnOutput)
-			// loss_train := ceLayer.forward(smOutput, Y)
-			loss_train := ceLayer.forward(smOutput, testY)
-			fmt.Println("LOSS in mnist:", loss_train) //, ", TEST LOSS:", loss_test)
+			// smOutput := smLayer.forward(nnOutput)
+			// loss_train := ceLayer.forward(smOutput, testY)
+			loss := f_nn(weight, testMatX, testY)
+			fmt.Println("LOSS in mnist:", loss) //, ", TEST LOSS:", loss_test)
 
+			fcLayer := newLinearLayer(500, 10)
+			fcLayer.W, fcLayer.B = deFlatten(weight.Val)
+			nnOutput := fcLayer.forward(testMatX)
 			count := 0
 			for i := 0 ; i < SAMPLE ; i++ {
 				max_ := nnOutput.mat[i][0]
@@ -590,7 +598,6 @@ func byzantineSGD(conn *net.UDPConn, dataName string) {
 			}
 
 			fmt.Println("Acc:", float64(count)*100/float64(SAMPLE))
-
 		}
 
 		// loss_train := f(feature, weight, "mse", "", 0)
@@ -689,8 +696,21 @@ func f(x FeatureType, w WeightType, loss_type, regularization string, lambda flo
 	return loss
 }
 
+func f_nn(w WeightType, matX *Matrix, Y []int) float64 {
+	fcLayer := newLinearLayer(500, 10)
+	smLayer := SoftmaxLayer{}
+	ceLayer := CrossEntropyLayer{}
+
+	fcLayer.W, fcLayer.B = deFlatten(w.Val)
+	nnOutput := fcLayer.forward(matX)
+	smOutput := smLayer.forward(nnOutput)
+	loss := ceLayer.forward(smOutput, Y)
+
+	return loss
+}
+
 func grad_f_nn(w WeightType, matX *Matrix, Y []int) WeightType {
-	var grad = WeightType{Val: make([]float64, len(w.Val))}
+	grad := WeightType{Val: make([]float64, len(w.Val))}
 	ind := 0
 	wx := &Matrix{row: 10, col: 500, mat: make([][]float64, 10)}
 	bx := &Matrix{row: 10, col: 1, mat: make([][]float64, 10)}
@@ -711,6 +731,9 @@ func grad_f_nn(w WeightType, matX *Matrix, Y []int) WeightType {
 	}
 
 	fcLayer := newLinearLayer(500, 10)
+	smLayer := SoftmaxLayer{}
+	ceLayer := CrossEntropyLayer{}
+
 	fcLayer.W = wx
 	fcLayer.B = bx
 	fcLayer.DW = getZeroMat(wx.row, wx.col)
