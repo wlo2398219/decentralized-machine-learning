@@ -176,7 +176,7 @@ func sendGradient(conn *net.UDPConn, packet *GradientPacket, Dst string) {
 
 // func newTrainig() chan<- *GradientPacket {
 
-func newTraining(conn *net.UDPConn, dataName string) {
+func newTraining(conn *net.UDPConn, dataName string, ch chan *GossipPacket) {
 	// load dataset
 	gradCh = make(chan *GradientPacket)
 

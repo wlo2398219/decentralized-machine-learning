@@ -36,6 +36,32 @@ func messageHandler(ch chan *GossipPacket) func(w http.ResponseWriter, req *http
 	}
 }
 
+// func mlHandler(ch chan *GossipPacket) func(w http.ResponseWriter, req *http.Request) {
+
+// 	return func(w http.ResponseWriter, req *http.Request) {
+
+// 		switch req.Method {
+// 		case "POST":
+
+// 			text := req.FormValue("text")
+
+// 			if req.FormValue("dest") == "" {
+// 				simplemessage := &SimpleMessage{OriginalName: "RUMOR", RelayPeerAddr: "", Contents: text}
+// 				ch <- &GossipPacket{Simple: simplemessage}
+// 			} else {
+// 				privateMessage := &PrivateMessage{Destination: req.FormValue("dest"), ID: 0, Text: text, HopLimit: 10}
+// 				ch <- &GossipPacket{Private: privateMessage}
+// 			}
+
+// 		case "GET":
+// 			fmt.Fprintf(w, strings.Join(ordered_msgs.GetSlice(), "<br/>"))
+
+// 		case "default":
+// 			fmt.Println("NO IDEA")
+// 		}
+// 	}
+// }
+
 func fileHandler(ch chan *GossipPacket) func(w http.ResponseWriter, req *http.Request) {
 
 	return func(w http.ResponseWriter, req *http.Request) {
