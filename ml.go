@@ -18,7 +18,7 @@ var (
 	feature FeatureType
 	globalWeight WeightType
 	// mnistFeature, mnistWeight = mnist_dataset()
-	fcLayer = newLinearLayer(500, 10)
+	// fcLayer = newLinearLayer(500, 10)
 	smLayer = SoftmaxLayer{}  
 	ceLayer = CrossEntropyLayer{}
 	globalX *Matrix
@@ -226,6 +226,7 @@ func distributedSGD(conn *net.UDPConn, dataName string) {
 		testY []int
 		gamma float64
 		grad WeightType
+		fcLayer FCLayer
 	)
 
 	if dataName != "mnist" {
@@ -363,6 +364,7 @@ func byzantineSGD(conn *net.UDPConn, dataName string) {
 		testMatX *Matrix
 		testY []int
 		gamma float64
+		fcLayer FCLayer
 	)
 	// feature, weight = load_data(dataName)
 
@@ -413,13 +415,35 @@ func byzantineSGD(conn *net.UDPConn, dataName string) {
 			peerLC := peerGradientEvo / (peerModelEvo + 1e-9)
 			fmt.Println("new PeerLC: value =", peerLC, peerGradientEvo, peerModelEvo)
 			if grad.Org == *name {
-				computedGrad := grad_f_nn(weightHistory[grad.IterID], globalX, globalY)
-				newGradDiff := sliceToMat(computedGrad.Val).
-					sub(sliceToMat(grad.Gradient.Val)).norm(2)
 				computedLastGrad := grad_f_nn(lastPeerWeight, globalX, globalY)
 				lastGradDiff := sliceToMat(computedLastGrad.Val).
 					sub(sliceToMat(lastPeerGradient.Val)).norm(2)
+				computedGrad := grad_f_nn(weightHistory[grad.IterID], globalX, globalY)
+				newGradDiff := sliceToMat(computedGrad.Val).
+					sub(sliceToMat(grad.Gradient.Val)).norm(2)
 				fmt.Println("new gradient diff =", newGradDiff, "last gradient diff =", lastGradDiff)
+
+				computedLastGrad = grad_f_nn(lastPeerWeight, globalX, globalY)
+				lastGradDiff = sliceToMat(computedLastGrad.Val).
+					sub(sliceToMat(lastPeerGradient.Val)).norm(2)
+				computedGrad2 := grad_f_nn(weightHistory[grad.IterID], globalX, globalY)
+				newGradDiff = sliceToMat(computedGrad2.Val).
+					sub(sliceToMat(grad.Gradient.Val)).norm(2)
+				fmt.Println("new gradient diff =", newGradDiff, "last gradient diff =", lastGradDiff)
+
+				computedLastGrad = grad_f_nn(lastPeerWeight, globalX, globalY)
+				lastGradDiff = sliceToMat(computedLastGrad.Val).
+					sub(sliceToMat(lastPeerGradient.Val)).norm(2)
+				computedGrad3 := grad_f_nn(weightHistory[grad.IterID], globalX, globalY)
+				newGradDiff = sliceToMat(computedGrad3.Val).
+					sub(sliceToMat(grad.Gradient.Val)).norm(2)
+				fmt.Println("new gradient diff =", newGradDiff, "last gradient diff =", lastGradDiff)
+
+				diff21 := sliceToMat(computedGrad2.Val).
+					sub(sliceToMat(computedGrad.Val)).norm(2)
+				diff31 := sliceToMat(computedGrad3.Val).
+					sub(sliceToMat(computedGrad.Val)).norm(2)
+				fmt.Println("diff. comp. grad2 =", diff21, "diff. comp. grad3 =", diff31)
 			}
 
 			peersLC[grad.Org] = peerLC
@@ -587,6 +611,7 @@ func newTesting(conn *net.UDPConn, dataFilename string) {
 		if dataset != "mnist" {
 			// TODO: Implement this if needed.
 		} else {
+			fcLayer := newLinearLayer(500, 10)
 			fcLayer.W, fcLayer.B = deFlatten(weight.Val)
 			testMatX := sliceToMat(dataFeature.Val[0]).T()
 			nnOutput := fcLayer.forward(testMatX)
@@ -685,6 +710,7 @@ func grad_f_nn(w WeightType, matX *Matrix, Y []int) WeightType {
 		ind++
 	}
 
+	fcLayer := newLinearLayer(500, 10)
 	fcLayer.W = wx
 	fcLayer.B = bx
 	fcLayer.DW = getZeroMat(wx.row, wx.col)
