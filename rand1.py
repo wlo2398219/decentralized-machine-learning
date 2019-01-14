@@ -13,6 +13,7 @@ commands = []
 template_gui = "./finalproject -UIPort=%d -gossipAddr=%s -name=%s -peers=%s -rtimer=5 -mode=%s -gui -byz=%s > %s &"
 template = "./finalproject -UIPort=%d -gossipAddr=%s -name=%s -peers=%s -rtimer=5 -mode=%s -byz=%s > %s &"
 random.seed(sys.argv[1])
+NUM = int(sys.argv[4])
 
 byz = ''
 if len(sys.argv) > 3:
@@ -31,6 +32,12 @@ for input_name in string.ascii_uppercase[:10]:
     
     for name, port in zip(string.ascii_uppercase[:10], range(5000, 5010)):
 
+        # ring topology
+        # if random.uniform(0, 1) <= p and name != input_name:
+        #     peers.append(head+str(port))
+        #     edge_list.append((name, input_name))
+
+        # ER graph
         if random.uniform(0, 1) <= p and name != input_name:
             peers.append(head+str(port))
             edge_list.append((name, input_name))
@@ -40,23 +47,16 @@ for input_name in string.ascii_uppercase[:10]:
             UIPort += ind
             gossipPort += ind
 
-            # if input_name == "J":
-            #     peers.append("127.0.0.1:5000")
-            #     edge_list.append(("J", "A"))
-            # else:
-            #     peers.append(head+str(port+1))
-            #     edge_list.append((input_name, string.ascii_uppercase[ind+1]))
-
         ind += 1
 
-
-    # if input_name == "A":
-    #     peers = []
-    #     for name, port in zip(string.ascii_uppercase[1:10], range(5001, 5010)):
-    #         peers.append(head+str(port))
-    #         edge_list.append((name, input_name))
-    # else:
-    #     peers = []
+        # star topology
+        # if input_name == "A":
+        #     peers = []
+        #     for name, port in zip(string.ascii_uppercase[1:10], range(5001, 5010)):
+        #         peers.append(head+str(port))
+        #         edge_list.append((name, input_name))
+        # else:
+        #     peers = []
         
     peers = ','.join(peers)
     gossipAddr = head + str(gossipPort)
@@ -85,15 +85,8 @@ if draw:
     nx.draw_circular(G, with_labels=True,  alpha = 0.7)
     plt.savefig('topo.png', format='PNG')    
 
-for command, n in zip(commands, string.ascii_uppercase[:7]):
+for command, n in zip(commands, string.ascii_uppercase[:NUM]):
     os.chdir(n)
     os.system(command)
     print(command)
     os.chdir("..")
-
-# time.sleep(30)
-
-# os.chdir("J")
-# os.system(commands[-1])
-# print(commands[-1])
-# os.chdir("..")

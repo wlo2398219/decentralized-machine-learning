@@ -18,6 +18,8 @@ bash $mnistDir/mnist_feature_init.sh "../$mnistDir"
 
 name="A"
 mode="$1"
+newpeers="$2"
+byzantineMode="$3"
 
 for i in `seq 1 10`;
 do
@@ -47,7 +49,15 @@ name='A'
 nNode=10
 
 
-python3 rand1.py 'B' "$mode" "B"
+if [[ $newpeers == "Y" ]]; then
+	python3 rand1.py "DABCD" "$mode" "" "7"	
+else 
+	if [[ $byzantineMode == "Y" ]]; then
+		python3 rand1.py "DABCD" "$mode" "E" "10"
+	else
+		python3 rand1.py "DABCD" "$mode" "" "10"
+	fi
+fi
 # for i in `seq 1 $nNode`;
 # do
 # 	cd $name
@@ -71,6 +81,27 @@ sleep 10
 
 # ./A/client -UIPort=10000 -train -file="mnist"
 ./A/client -UIPort=10000 -train -file="mnist"
+
+sleep 10
+
+if [[ $newpeers == "Y" ]]; then
+	cd J
+	./finalproject -UIPort=10009 -gossipAddr=5010 -name=J -peers=127.0.0.1:5002 -rtimer=5 -mode=distributed -byz=False > J.out &
+	cd ..
+
+	sleep 5
+
+	cd H
+	./finalproject -UIPort=10007 -gossipAddr=127.0.0.1:5007 -name=H -peers=127.0.0.1:5000 -rtimer=5 -mode=distributed -byz=False > H.out &
+	cd ..
+
+	sleep 5
+
+	cd I
+	./finalproject -UIPort=10008 -gossipAddr=127.0.0.1:5008 -name=I -peers=127.0.0.1:5002 -rtimer=5 -mode=distributed -byz=False > I.out &
+	cd ..
+fi
+
 
 read -p "Press [Enter] key to test.."
 for i in `seq 1 10`;
