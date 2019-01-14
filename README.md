@@ -26,8 +26,18 @@ Before the training, we need to create a new directory demo/ like above and put 
 
 ## Execution
 Run the mnist_training.sh in demo/ and you can observe the training at demo/A/A.out
-- Distributed version
--- ./mnist_training.sh distributed
-- Byzantine version
--- ./mnist_training.sh byzantine
+
+```
+./mnist_training.sh $mode $newpeers $byzantineMode
+$mode: distributed/byzantine 
+$newpeers: Y/N (Y: new peers will join)
+$byzantineMode: Y/N (Y: Peer E will serve as Byzantine node)
+```
+
+- Test Simple distributed algorithm with the join of new peer
+  - ./mnist_training.sh distributed Y N
+- Test Simple distributed algorithm with E as Byzantine node
+  - ./mnist_training.sh distributed N Y
+- Test Byzantine algorithm with E as Byzantine node
+  - ./mnist_training.sh byzantine N Y
 
