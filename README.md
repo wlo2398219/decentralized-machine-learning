@@ -33,8 +33,9 @@ $mode: distributed/byzantine
 $newpeers: Y/N (Y: new peers will join)
 $byzantineMode: Y/N (Y: Peer E will serve as Byzantine node)
 ```
+Web will be run at localhost:10000
 
-- Test Simple distributed algorithm with the join of new peer
+- Test Simple distributed algorithm with the join of new peers
   - ./mnist_training.sh distributed Y N
 - Test Simple distributed algorithm with E as Byzantine node
   - ./mnist_training.sh distributed N Y
