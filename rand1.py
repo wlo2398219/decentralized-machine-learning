@@ -4,11 +4,11 @@ import sys
 import os
 import networkx as nx
 import matplotlib.pyplot as plt
-
+import time
 
 head = "127.0.0.1:"
 
-p = 0.2
+p = 0.25
 commands = []
 template_gui = "./finalproject -UIPort=%d -gossipAddr=%s -name=%s -peers=%s -rtimer=5 -mode=%s -gui -byz=%s > %s &"
 template = "./finalproject -UIPort=%d -gossipAddr=%s -name=%s -peers=%s -rtimer=5 -mode=%s -byz=%s > %s &"
@@ -35,12 +35,29 @@ for input_name in string.ascii_uppercase[:10]:
             peers.append(head+str(port))
             edge_list.append((name, input_name))
 
+
         if name == input_name:
             UIPort += ind
             gossipPort += ind
-        
+
+            # if input_name == "J":
+            #     peers.append("127.0.0.1:5000")
+            #     edge_list.append(("J", "A"))
+            # else:
+            #     peers.append(head+str(port+1))
+            #     edge_list.append((input_name, string.ascii_uppercase[ind+1]))
+
         ind += 1
-    
+
+
+    # if input_name == "A":
+    #     peers = []
+    #     for name, port in zip(string.ascii_uppercase[1:10], range(5001, 5010)):
+    #         peers.append(head+str(port))
+    #         edge_list.append((name, input_name))
+    # else:
+    #     peers = []
+        
     peers = ','.join(peers)
     gossipAddr = head + str(gossipPort)
     outputFile = input_name + ".out"
@@ -56,7 +73,7 @@ for input_name in string.ascii_uppercase[:10]:
         commands.append(template%(UIPort, gossipAddr, input_name, peers, sys.argv[2], is_byz, outputFile))    
     # print(commands[-1])
 
-draw = False
+draw = True
 if draw:
     G = nx.Graph()
 
@@ -68,8 +85,15 @@ if draw:
     nx.draw_circular(G, with_labels=True,  alpha = 0.7)
     plt.savefig('topo.png', format='PNG')    
 
-for command, n in zip(commands, string.ascii_uppercase[:10]):
+for command, n in zip(commands, string.ascii_uppercase[:7]):
     os.chdir(n)
     os.system(command)
     print(command)
     os.chdir("..")
+
+# time.sleep(30)
+
+# os.chdir("J")
+# os.system(commands[-1])
+# print(commands[-1])
+# os.chdir("..")

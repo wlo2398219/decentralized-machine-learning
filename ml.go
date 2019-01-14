@@ -133,7 +133,7 @@ func handleWeight(conn *net.UDPConn, packet *WeightPacket) {
 			sendGradient(conn, &GradientPacket{Org: *name, Dst: packet.Org, IterID: packet.IterID, Gradient: grad}, packet.Org)
 		} else {
 			go func() {
-				time.Sleep(time.Duration(rand.Intn(5000)) * time.Millisecond)
+				time.Sleep(time.Duration(3000+rand.Intn(7000)) * time.Millisecond)
 				sendGradient(conn, &GradientPacket{Org: *name, Dst: packet.Org, IterID: packet.IterID, Gradient: grad}, packet.Org)
 			}()
 		}
@@ -259,10 +259,12 @@ func distributedSGD(conn *net.UDPConn, dataName string, ch chan *GossipPacket) {
 
 	fmt.Println("DATASET:   ", dataName)
 	for round := 0; round < 30; round++ {
+		str_result := "<br/>"
 
 		broadcastWeight(conn, &WeightPacket{Org: *name, IterID: round, Dataset:dataName, Weight: &weight})
-		fmt.Println("====== TRAINING EPOCH", round, "======")
 
+		fmt.Println("====== TRAINING EPOCH", round, "======")
+		str_result += "====== TRAINING EPOCH " + strconv.Itoa(round) + " ======<br/>"
 		// used to save sum(grad)
 		// updates := make([]float64, d)
 
@@ -301,6 +303,7 @@ func distributedSGD(conn *net.UDPConn, dataName string, ch chan *GossipPacket) {
 					i++
 
 					fmt.Println("===== GET GRADIENT FROM", ch.Org, "=====")
+					str_result += "===== GET GRADIENT FROM " + ch.Org + " =====<br/>"
 					// fmt.Println(ch.Gradient.Val)
 					for j := range updates {
 						updates[j] += ch.Gradient.Val[j]
@@ -350,9 +353,10 @@ func distributedSGD(conn *net.UDPConn, dataName string, ch chan *GossipPacket) {
 			}
 			acc := float64(count)*100/float64(SAMPLE)
 			fmt.Println("Acc:", acc)
-			text := "===== TESTING ACCURACY:" + strconv.FormatFloat(acc, 'f', 1, 64) + " ====="
+			// text := "===== TESTING ACCURACY:" + strconv.FormatFloat(acc, 'f', 1, 64) + " ====="
+			str_result += "===== TESTING ACCURACY:" + strconv.FormatFloat(acc, 'f', 1, 64) + " =====<br/>"
 			// text := "ACCURACY:" + strconv.FormatFloat(acc, 'f', 1, 64)
-			simplemessage := &SimpleMessage{OriginalName: "RUMOR", RelayPeerAddr: "", Contents: text}
+			simplemessage := &SimpleMessage{OriginalName: "RUMOR", RelayPeerAddr: "", Contents: str_result}
 			ch <- &GossipPacket{Simple: simplemessage}
 		}
 
@@ -407,16 +411,19 @@ func byzantineSGD(conn *net.UDPConn, dataName string, ch chan *GossipPacket) {
 	// Lipschitz filter as described in the paper sec 3.1.
 	lipschitzFilter := func(grad *GradientPacket) bool {
 		// Update LC of the peer.
-		lastPeerGradient, exist := lastPeerGradients[grad.Org]
-		lastPeerWeight, exist := lastPeerWeights[grad.Org]
-		if !exist { fmt.Println("It's the first gradient. peerLC = INF.") }
-		if exist {
+		lastPeerGradient, exist1 := lastPeerGradients[grad.Org]
+		lastPeerWeight, exist2 := lastPeerWeights[grad.Org]
+		newPeerLC := math.Inf(1)
+		if !exist1 || !exist2 { fmt.Println("It's the first gradient. peerLC = INF.") 
+		} else {
 			peerGradientEvo := sliceToMat(grad.Gradient.Val).
 				sub(sliceToMat(lastPeerGradient.Val)).norm(2)
 			peerModelEvo := sliceToMat(weightHistory[grad.IterID].Val).
 				sub(sliceToMat(lastPeerWeight.Val)).norm(2)
 			peerLC := peerGradientEvo / (peerModelEvo + 1e-9)
+			newPeerLC = peerLC
 			fmt.Println("new PeerLC: value =", peerLC, peerGradientEvo, peerModelEvo)
+			
 			if grad.Org == *name && false {
 				lastPeerWeight = newWeight(lastPeerWeight)
 				computedLastGrad := grad_f_nn(lastPeerWeight, globalX, globalY)
@@ -458,6 +465,7 @@ func byzantineSGD(conn *net.UDPConn, dataName string, ch chan *GossipPacket) {
 
 			peersLC[grad.Org] = peerLC
 		}
+
 		lastPeerGradients[grad.Org] = newWeight(grad.Gradient)
 		lastPeerWeights[grad.Org] = weightHistory[grad.IterID]
 
@@ -471,7 +479,7 @@ func byzantineSGD(conn *net.UDPConn, dataName string, ch chan *GossipPacket) {
 
 		cnt := 0
 		for peer, peerLC := range peersLC {
-			if peerLC < newLC { cnt++ }
+			if !math.IsInf(peerLC, 1) && peerLC <= newPeerLC { cnt++ }
 			fmt.Println("peerLC = (", peer, peerLC, ")")
 		}
 
@@ -500,7 +508,7 @@ func byzantineSGD(conn *net.UDPConn, dataName string, ch chan *GossipPacket) {
 	if dataName != "mnist" {
 		gamma = 0.0000000001      // gamma is learning step size
 	} else {
-		gamma = 5 * 1e-4    // gamma is learning step size
+		gamma = 5 * 1e-4 // gamma is learning step size
 	}
 
 
@@ -511,10 +519,12 @@ func byzantineSGD(conn *net.UDPConn, dataName string, ch chan *GossipPacket) {
 	loss_train := f_nn(weight, testMatX, testY)
 	fmt.Println("INIT LOSS in mnist:", loss_train) //, ", TEST LOSS:", loss_test)
 
-	for round := 0; round < 100; round++ {
+	for round := 0; round < 500; round++ {
 		tmpWeight := newWeight(weight)
 		weightHistory = append(weightHistory, tmpWeight)
 
+		str_result := "<br/>"
+		str_result += "====== TRAINING ITERATION " + strconv.Itoa(round) + " ======<br/>"
 		fmt.Println("====== TRAINING ITERATION", round, "======")
 		broadcastWeight(conn, &WeightPacket{Org: *name, IterID: round, Weight: &tmpWeight, Dataset: dataName})
 
@@ -531,7 +541,7 @@ func byzantineSGD(conn *net.UDPConn, dataName string, ch chan *GossipPacket) {
 			}
 
 			packet := GradientPacket{Org:*name, Dst:*name, Dataset:dataName, IterID: r, Gradient: grad}
-			time.Sleep(time.Duration(rand.Intn(5000)) * time.Millisecond)
+			time.Sleep(time.Duration(3000+rand.Intn(7000)) * time.Millisecond)
 			gradCh <- &packet
 		}(round, newWeight(weight))
 
@@ -546,6 +556,9 @@ func byzantineSGD(conn *net.UDPConn, dataName string, ch chan *GossipPacket) {
 			if passLipschitz && passFrequency {
 				delay := float64(round - grad.IterID)
 				fmt.Println("round:", round, "IterID:", grad.IterID, "delay:", delay)
+				
+				str_result += "===== GET GRADIENT FROM " + grad.Org + " =====</br>" 
+				// fmt.Println("===== GET GRADIENT FROM", grad.Org, grad.IterID, "=====")
 
 				for j := range updates {
 					updates[j] += dampening(0) * grad.Gradient.Val[j]
@@ -602,8 +615,8 @@ func byzantineSGD(conn *net.UDPConn, dataName string, ch chan *GossipPacket) {
 
 			acc := float64(count)*100/float64(SAMPLE)
 			fmt.Println("Acc:", acc)
-			text := "===== TESTING ACCURACY:" + strconv.FormatFloat(acc, 'f', 1, 64) + " ====="
-			simplemessage := &SimpleMessage{OriginalName: "RUMOR", RelayPeerAddr: "", Contents: text}
+			str_result += "===== TESTING ACCURACY:" + strconv.FormatFloat(acc, 'f', 1, 64) + " ====="
+			simplemessage := &SimpleMessage{OriginalName: "RUMOR", RelayPeerAddr: "", Contents: str_result}
 			ch <- &GossipPacket{Simple: simplemessage}
 			// fmt.Println("Acc:", float64(count)*100/float64(SAMPLE))
 		}

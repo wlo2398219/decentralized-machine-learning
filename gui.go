@@ -22,7 +22,7 @@ func mlHandler(w http.ResponseWriter, req *http.Request) {
 	switch req.Method {
 	case "POST":
 		vals := strings.Split(req.FormValue("data"), ",")
-		fmt.Println(len(vals))
+		// fmt.Println(len(vals))
 		
 		img := image.NewNRGBA(image.Rect(0, 0, 196, 196))
 
@@ -32,7 +32,7 @@ func mlHandler(w http.ResponseWriter, req *http.Request) {
 				g, _ := strconv.ParseUint(vals[y*4*196+x*4+1], 10, 8)
 				b, _ := strconv.ParseUint(vals[y*4*196+x*4+2], 10, 8)
 
-				fmt.Println(r,g,b)
+				// fmt.Println(r,g,b)
 				img.Set(x, y, color.NRGBA{
 					R: uint8(r),
 					G: uint8(g),
