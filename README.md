@@ -19,8 +19,8 @@ demo
 ```
 ## Place files
 Before the training, we need to create a new directory demo/ like above and put the following directory & files
-1. hidden_layer_train_uni_split/ (to be dowloaded)
-2. hidden_layer_test.csv (to be dowloaded)
+1. unzip [hidden_layer_train_uni_split.zip](https://drive.google.com/file/d/1oTq_px8un_yL4BYwsNcJqofRpIYFtV3w/view?fbclid=IwAR1LnWR7-cQ_SE0BnR462n2J-aYml00GFNHmaYB99jbLZ9pNCpEYf0AXiIE) and rename as hidden_layer_train_uni_split/ (to be dowloaded)
+2. [hidden_layer_test.csv](https://drive.google.com/file/d/1wvjx4Vo_n37WjRdSGoAgQX4_vXHhc5KS/view?usp=sharing) (to be dowloaded)
 3. mnist_training.sh (from finalproject)
 
 
